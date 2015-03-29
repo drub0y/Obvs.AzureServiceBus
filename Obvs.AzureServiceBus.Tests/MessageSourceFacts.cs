@@ -22,7 +22,7 @@ namespace Obvs.AzureServiceBus.Tests
                     new MessageSource<TestMessage>((MessageReceiver)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
                 };
 
-                action.ShouldThrow<ArgumentNullException>();
+                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "messageReceiver");
             }
 
             [Fact]
@@ -33,7 +33,7 @@ namespace Obvs.AzureServiceBus.Tests
                     new MessageSource<TestMessage>((IObservable<BrokeredMessage>)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
                 };
 
-                action.ShouldThrow<ArgumentNullException>();
+                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "brokeredMessages");
             }
 
             [Fact]
@@ -44,7 +44,7 @@ namespace Obvs.AzureServiceBus.Tests
                     new MessageSource<TestMessage>(new Mock<IObservable<BrokeredMessage>>().Object, null);
                 };
 
-                action.ShouldThrow<ArgumentNullException>();
+                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "deserializers");
             }
         }
 

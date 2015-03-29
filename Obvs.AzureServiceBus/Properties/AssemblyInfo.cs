@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 
 [assembly: AssemblyTitle("Obvs.AzureServiceBus")]
 [assembly: AssemblyDescription("Azure ServiceBus support for the Obvs framework.")]
@@ -15,3 +16,6 @@
 
 [assembly: AssemblyVersion("0.1.0.*")]
 [assembly: AssemblyInformationalVersion("0.1.0-alpha")]
+
+[assembly: InternalsVisibleTo("Obvs.AzureServiceBus.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

@@ -68,6 +68,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Infrastructure\IMessageSender.cs" />
+    <Compile Include="Infrastructure\MessageSenderWrapper.cs" />
     <Compile Include="MessagePublisher.cs" />
     <Compile Include="MessageSource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
