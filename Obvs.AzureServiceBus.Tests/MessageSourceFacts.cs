@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
-using Xunit;
 using FluentAssertions;
-using Obvs.Types;
-using Moq;
 using Microsoft.ServiceBus.Messaging;
+using Moq;
+using Obvs.Types;
+using Xunit;
 
 namespace Obvs.AzureServiceBus.Tests
 {
@@ -20,7 +19,18 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessageSource<TestMessage>(null, new [] { new Mock<IMessageDeserializer<TestMessage>>().Object });
+                    new MessageSource<TestMessage>((MessageReceiver)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
+                };
+
+                action.ShouldThrow<ArgumentNullException>();
+            }
+
+            [Fact]
+            public void CreatingWithNullBrokeredMessageObservableThrows()
+            {
+                Action action = () =>
+                {
+                    new MessageSource<TestMessage>((IObservable<BrokeredMessage>)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
                 };
 
                 action.ShouldThrow<ArgumentNullException>();
@@ -31,16 +41,56 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessageSource<TestMessage>(new Mock<MessageReceiver>().Object, null);
+                    new MessageSource<TestMessage>(new Mock<IObservable<BrokeredMessage>>().Object, null);
                 };
 
                 action.ShouldThrow<ArgumentNullException>();
             }
         }
 
+        public class MessageProcessingFacts
+        {
+
+            [Fact]
+            public async Task ReceivesAndDeserializesMessage()
+            {
+                Mock<IMessageDeserializer<TestMessage>> mockTestMessageDeserializer = new Mock<IMessageDeserializer<TestMessage>>();
+                mockTestMessageDeserializer.Setup(md => md.GetTypeName())
+                    .Returns(typeof(TestMessage).Name);
+
+                TestMessage testMessage = new TestMessage();
+
+                mockTestMessageDeserializer.Setup(md => md.Deserialize(It.IsAny<object>()))
+                    .Returns(testMessage);
+
+                IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(o =>
+                    {
+                        o.OnNext(new BrokeredMessage()
+                        {
+                            Properties =
+                            {
+                                { MessagePropertyNames.TypeName, typeof(TestMessage).Name }
+                            }
+                        });
+
+                        o.OnCompleted();
+
+                        return Disposable.Empty;
+                    });
+
+                MessageSource<TestMessage> messageSource = new MessageSource<TestMessage>(brokeredMessages, new[] { mockTestMessageDeserializer.Object });
+
+                TestMessage message = await messageSource.Messages.SingleOrDefaultAsync();
+
+                message.ShouldBeEquivalentTo(testMessage);
+
+                mockTestMessageDeserializer.Verify(md => md.Deserialize(It.IsAny<object>()), Times.Once());
+            }
+        }
+
         public class TestMessage : IMessage
         {
-            
+
         }
     }
 }

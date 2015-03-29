@@ -6,61 +6,47 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.Types;
+using HackedBrain.WindowsAzure.ServiceBus.Messaging;
 
 namespace Obvs.AzureServiceBus
 {
     public class MessageSource<TMessage> : IMessageSource<TMessage> 
         where TMessage : IMessage
     {
-        private MessageReceiver _messageReceiver;
-        private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
-        
+        private IObservable<BrokeredMessage> _brokeredMessages;
+        private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;        
 
         public MessageSource(MessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
         {
             if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
-            if(deserializers == null) throw new ArgumentNullException("deserializers");
             
-            _messageReceiver = messageReceiver;
-            _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
+            Initialize(messageReceiver.WhenMessageReceived(), deserializers);
+        }
+
+        public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+        {
+            Initialize(brokeredMessages, deserializers);
         }
 
         public IObservable<TMessage> Messages
         {
             get
             {
-                return Observable.Create<TMessage>(async o =>
-                    {
-                        CancellationDisposable cancellationDispoable = new CancellationDisposable();
-
-                        do
-                        {
-                            using(BrokeredMessage brokeredMessage = await _messageReceiver.ReceiveAsync())
-                            {
-                                TMessage message = Deserialize(brokeredMessage);
-
-                                try
-                                {
-                                    o.OnNext(default(TMessage));
-
-                                    await brokeredMessage.CompleteAsync();
-                                }
-                                catch(Exception exception)
-                                {
-                                    o.OnError(exception);
-                                }
-                            }
-                        } while(!cancellationDispoable.IsDisposed);
-
-                        o.OnCompleted();
-
-                        return cancellationDispoable;
-                    });
+                return _brokeredMessages.Select(this.Deserialize);
             }
         }
 
         public void Dispose()
         {
+        }
+
+        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+        {
+            if(brokeredMessages == null) throw new ArgumentNullException("brokeredMessages");
+            if(deserializers == null) throw new ArgumentNullException("deserializers");
+
+            _brokeredMessages = brokeredMessages;
+            _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
         }
 
         private TMessage Deserialize(BrokeredMessage message)
