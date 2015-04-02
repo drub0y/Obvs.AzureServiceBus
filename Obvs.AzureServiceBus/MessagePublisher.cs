@@ -49,12 +49,33 @@ namespace Obvs.AzureServiceBus
 
             BrokeredMessage brokeredMessage = new BrokeredMessage(data);
 
+            SetCorrelationIdentifierIfApplicable(message, brokeredMessage);
+
             foreach(KeyValuePair<string, object> property in properties)
             {
                 brokeredMessage.Properties.Add(property);
             }
 
             _messageSender.Send(brokeredMessage);
+        }
+
+        private void SetCorrelationIdentifierIfApplicable(TMessage message,BrokeredMessage brokeredMessage)
+        {
+            IRequest requestMessage = message as IRequest;
+
+            if(requestMessage != null)
+            {
+                brokeredMessage.CorrelationId = requestMessage.RequestId;
+            }
+            else
+            {
+                IResponse responseMessage = message as IResponse;
+
+                if(responseMessage != null)
+                {
+                    brokeredMessage.CorrelationId = responseMessage.RequestId;
+                }
+            }
         }
     }
 }
