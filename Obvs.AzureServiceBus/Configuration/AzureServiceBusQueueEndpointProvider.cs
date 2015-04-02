@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.Configuration;
+using Obvs.MessageProperties;
+using Obvs.Serialization;
 using Obvs.Types;
 
 namespace Obvs.AzureServiceBus.Configuration

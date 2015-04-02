@@ -1,5 +1,6 @@
 ﻿using Moq;
 using Obvs.AzureServiceBus.Configuration;
+using Obvs.Serialization;
 using Obvs.Types;
 using Xunit;
 

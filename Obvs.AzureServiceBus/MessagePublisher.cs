@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
+using Obvs.MessageProperties;
+using Obvs.Serialization;
 using Obvs.Types;
 
 namespace Obvs.AzureServiceBus
@@ -30,18 +33,18 @@ namespace Obvs.AzureServiceBus
         }
 
 
-        public void Publish(TMessage message)
+        public Task PublishAsync(TMessage message)
         {
             List<KeyValuePair<string, object>> properties = _propertyProvider.GetProperties(message).ToList();
 
-            Publish(message, properties);
+            return Publish(message, properties);
         }
 
         public void Dispose()
         {
         }
 
-        private void Publish(TMessage message, List<KeyValuePair<string, object>> properties)
+        private async Task Publish(TMessage message, List<KeyValuePair<string, object>> properties)
         {
             properties.Add(new KeyValuePair<string, object>(MessagePropertyNames.TypeName, message.GetType().Name));
 
@@ -54,7 +57,7 @@ namespace Obvs.AzureServiceBus
                 brokeredMessage.Properties.Add(property);
             }
 
-            _messageSender.Send(brokeredMessage);
+            await _messageSender.SendAsync(brokeredMessage);
         }
     }
 }

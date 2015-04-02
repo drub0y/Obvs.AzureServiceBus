@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.ServiceBus.Messaging;
 using Moq;
 using Obvs.AzureServiceBus.Infrastructure;
+using Obvs.MessageProperties;
+using Obvs.Serialization;
 using Obvs.Types;
 using Xunit;
 
@@ -74,22 +77,23 @@ namespace Obvs.AzureServiceBus.Tests
 
                 TestMessage message = new TestMessage();
 
-                messagePublisher.Publish(message);
+                messagePublisher.PublishAsync(message);
 
                 mockMessageSerializer.Verify(ms => ms.Serialize(It.Is<TestMessage>(it => Object.ReferenceEquals(it, message))), Times.Once());
             }
 
             [Fact]
-            public void GetsMessagePropertiesFromPropertyProviderAndAppliesThemToTheBrokeredMessage()
+            public async Task GetsMessagePropertiesFromPropertyProviderAndAppliesThemToTheBrokeredMessage()
             {
                 Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
                 BrokeredMessage brokeredMessageSent = null;
 
-                mockMessageSender.Setup(ms => ms.Send(It.IsAny<BrokeredMessage>()))
+                mockMessageSender.Setup(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()))
                     .Callback<BrokeredMessage>(bm =>
                     {
                         brokeredMessageSent = bm;
-                    });
+                    })
+                    .Returns(Task.FromResult<object>(null));
 
                 Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
 
@@ -108,7 +112,7 @@ namespace Obvs.AzureServiceBus.Tests
 
                 TestMessage message = new TestMessage();
 
-                messagePublisher.Publish(message);
+                await messagePublisher.PublishAsync(message);
 
                 mockMessagePropertyProvider.Verify(mpp => mpp.GetProperties(It.Is<TestMessage>(it => Object.ReferenceEquals(it, message))), Times.Once);
 
@@ -120,16 +124,17 @@ namespace Obvs.AzureServiceBus.Tests
             }
 
             [Fact]
-            public void AppliesMessageTypeNamePropertyToTheBrokeredMessage()
+            public async Task AppliesMessageTypeNamePropertyToTheBrokeredMessage()
             {
                 Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
                 BrokeredMessage brokeredMessageSent = null;
 
-                mockMessageSender.Setup(ms => ms.Send(It.IsAny<BrokeredMessage>()))
+                mockMessageSender.Setup(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()))
                     .Callback<BrokeredMessage>(bm =>
                     {
                         brokeredMessageSent = bm;
-                    });
+                    })
+                    .Returns(Task.FromResult<object>(null));
 
                 Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
 
@@ -139,7 +144,7 @@ namespace Obvs.AzureServiceBus.Tests
 
                 TestMessage message = new TestMessage();
 
-                messagePublisher.Publish(message);
+                await messagePublisher.PublishAsync(message);
 
                 brokeredMessageSent.Should().NotBeNull();
 
@@ -147,7 +152,7 @@ namespace Obvs.AzureServiceBus.Tests
             }
 
             [Fact]
-            public void SendsMessage()
+            public async Task SendsMessage()
             {
                 Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
 
@@ -159,9 +164,9 @@ namespace Obvs.AzureServiceBus.Tests
 
                 TestMessage message = new TestMessage();
 
-                messagePublisher.Publish(message);
+                await messagePublisher.PublishAsync(message);
 
-                mockMessageSender.Verify(ms => ms.Send(It.IsAny<BrokeredMessage>()), Times.Once());
+                mockMessageSender.Verify(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()), Times.Once());
             }
         }
 
