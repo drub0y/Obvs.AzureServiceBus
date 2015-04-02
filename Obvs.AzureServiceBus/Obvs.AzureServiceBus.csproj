@@ -68,6 +68,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Configuration\AzureServiceBusConfigExtensions.cs" />
+    <Compile Include="Configuration\AzureServiceBusQueueEndpointProvider.cs" />
+    <Compile Include="Configuration\AzureServiceBusQueueFluentConfig.cs" />
+    <Compile Include="Configuration\MessageClientEntityFactory.cs" />
     <Compile Include="Infrastructure\IMessageSender.cs" />
     <Compile Include="Infrastructure\MessageSenderWrapper.cs" />
     <Compile Include="MessagePublisher.cs" />
