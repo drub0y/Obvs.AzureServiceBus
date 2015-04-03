@@ -38,6 +38,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private MessagingFactorySettings _settings;
         private IMessageSerializer _serializer;
         private IMessageDeserializerFactory _deserializerFactory;
+        private string _assemblyNameContains;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings = new List<MessageTypePathMappingDetails>();
 
         public AzureServiceBusQueueFluentConfig(ICanAddEndpoint canAddEndpoint)
@@ -68,7 +69,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         private AzureServiceBusQueueEndpointProvider<TServiceMessage> CreateProvider()
         {
-            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _connectionString, _serializer, _deserializerFactory, _messageTypePathMappings, _settings);
+            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _connectionString, _serializer, _deserializerFactory, _messageTypePathMappings, _settings, _assemblyNameContains);
         }
 
         public ICanSpecifyAzureServiceBusMessagingSettings WithConnectionString(Uri connectionString)
@@ -116,7 +117,8 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanCreateEndpointAsClientOrServer FilterMessageTypeAssemblies(string assemblyNameContains)
         {
-            throw new NotImplementedException();
+            _assemblyNameContains = assemblyNameContains;
+            return this;
         }
     }
 }

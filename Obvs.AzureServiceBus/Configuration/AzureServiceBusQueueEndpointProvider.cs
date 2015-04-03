@@ -19,7 +19,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly string _assemblyNameContains;
         private readonly MessagingFactorySettings _settings;
 
-        public AzureServiceBusQueueEndpointProvider(string serviceName, Uri connectionString, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, MessagingFactorySettings settings)
+        public AzureServiceBusQueueEndpointProvider(string serviceName, Uri connectionString, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, MessagingFactorySettings settings, string assemblyNameContains)
             : base(serviceName)
         {
             _connectionUri = connectionString;
@@ -27,10 +27,11 @@ namespace Obvs.AzureServiceBus.Configuration
             _deserializerFactory = deserializerFactory;
             _messageTypePathMappings = messageTypePathMappings;
             _settings = settings;
+            _assemblyNameContains = assemblyNameContains;
         }
 
         public AzureServiceBusQueueEndpointProvider(string serviceName, Uri connectionString, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory)
-            : this(serviceName, connectionString, serializer, deserializerFactory, new List<MessageTypePathMappingDetails>(), new MessagingFactorySettings())
+            : this(serviceName, connectionString, serializer, deserializerFactory, new List<MessageTypePathMappingDetails>(), new MessagingFactorySettings(), null)
         {
         }
 
