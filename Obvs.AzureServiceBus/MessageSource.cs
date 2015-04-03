@@ -7,6 +7,8 @@ using System.Reactive.Linq;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.Types;
 using HackedBrain.WindowsAzure.ServiceBus.Messaging;
+using Obvs.Serialization;
+using Obvs.MessageProperties;
 
 namespace Obvs.AzureServiceBus
 {

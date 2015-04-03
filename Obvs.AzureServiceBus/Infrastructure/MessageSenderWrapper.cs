@@ -15,11 +15,6 @@ namespace Obvs.AzureServiceBus.Infrastructure
             _messageSender = messageSender;
         }
 
-        public void Send(BrokeredMessage brokeredMessage)
-        {
-            _messageSender.Send(brokeredMessage);
-        }
-
         public Task SendAsync(BrokeredMessage brokeredMessage)
         {
             return _messageSender.SendAsync(brokeredMessage);

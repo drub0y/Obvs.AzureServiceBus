@@ -5,8 +5,6 @@ namespace Obvs.AzureServiceBus.Infrastructure
 {
     internal interface IMessageSender
     {
-        void Send(BrokeredMessage brokeredMessage);
-
         Task SendAsync(BrokeredMessage brokeredMessage);
     }
 }

@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.ServiceBus.Messaging;
 using Moq;
+using Obvs.MessageProperties;
+using Obvs.Serialization;
 using Obvs.Types;
 using Xunit;
 
