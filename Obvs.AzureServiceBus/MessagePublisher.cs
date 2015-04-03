@@ -35,7 +35,7 @@ namespace Obvs.AzureServiceBus
 
         public Task PublishAsync(TMessage message)
         {
-            List<KeyValuePair<string, object>> properties = _propertyProvider.GetProperties(message).ToList();
+            IEnumerable<KeyValuePair<string, object>> properties = _propertyProvider.GetProperties(message);
 
             return Publish(message, properties);
         }
@@ -44,25 +44,30 @@ namespace Obvs.AzureServiceBus
         {
         }
 
-        private async Task Publish(TMessage message, List<KeyValuePair<string, object>> properties)
+        private async Task Publish(TMessage message, IEnumerable<KeyValuePair<string, object>> properties)
         {
-            properties.Add(new KeyValuePair<string, object>(MessagePropertyNames.TypeName, message.GetType().Name));
-
             object data = _serializer.Serialize(message);
 
             BrokeredMessage brokeredMessage = new BrokeredMessage(data);
 
             SetCorrelationIdentifierIfApplicable(message, brokeredMessage);
+            
+            SetProperties(message, properties, brokeredMessage);
+
+            await _messageSender.SendAsync(brokeredMessage);
+        }
+
+        private static void SetProperties(TMessage message, IEnumerable<KeyValuePair<string, object>> properties, BrokeredMessage brokeredMessage)
+        {
+            brokeredMessage.Properties.Add(MessagePropertyNames.TypeName, message.GetType().Name);
 
             foreach(KeyValuePair<string, object> property in properties)
             {
                 brokeredMessage.Properties.Add(property);
             }
-
-            await _messageSender.SendAsync(brokeredMessage);
         }
 
-        private void SetCorrelationIdentifierIfApplicable(TMessage message,BrokeredMessage brokeredMessage)
+        private void SetCorrelationIdentifierIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
         {
             IRequest requestMessage = message as IRequest;
 
