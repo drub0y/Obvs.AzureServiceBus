@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 
 namespace Obvs.AzureServiceBus.Configuration
@@ -20,18 +23,20 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly string _path;
         private readonly MessagingEntityType _messagingEntityType;
         private readonly ReceiveMode _receiveMode;
+        private readonly bool _isDynamic;
 
         public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType)
-            : this(messageType, path, messagingEntityType, ReceiveMode.PeekLock)
+            : this(messageType, path, messagingEntityType, ReceiveMode.PeekLock, false)
         {
         }
 
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, ReceiveMode receiveMode)
+        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, ReceiveMode receiveMode, bool isDynamic)
         {
             _messageType = messageType;
             _path = path;
             _messagingEntityType = messagingEntityType;
             _receiveMode = receiveMode;
+            _isDynamic = isDynamic;
         }
 
         public Type MessageType
@@ -65,22 +70,43 @@ namespace Obvs.AzureServiceBus.Configuration
                 return _messagingEntityType;
             }
         }
+
+        public bool IsDynamic
+        {
+            get
+            {
+                return _isDynamic;
+            }
+        }
     }
     
     internal sealed class MessageClientEntityFactory
     {
+        private readonly NamespaceManager _namespaceManager;
         private readonly MessagingFactory _messagingFactory;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings;
 
-        public MessageClientEntityFactory(Uri connectionUri, MessagingFactorySettings settings, List<MessageTypePathMappingDetails> messageTypePathMappings)
+        public MessageClientEntityFactory(string connectionString, MessagingFactorySettings settings, List<MessageTypePathMappingDetails> messageTypePathMappings)
         {
-            _messagingFactory = MessagingFactory.Create(connectionUri, settings);
+            _namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
+            _messagingFactory = MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider);
             _messageTypePathMappings = messageTypePathMappings;
         }
 
         public MessageReceiver CreateMessageReceiver<TMessage>()
         {
             MessageTypePathMappingDetails mappingDetails = GetMappingDetails<TMessage>(MessagingEntityType.Queue, MessagingEntityType.Subscription);
+
+            string finalMessagingEntityPath;
+
+            if(mappingDetails.IsDynamic)
+            {
+                finalMessagingEntityPath = CreateDynamicMessagingEntity(mappingDetails);
+            }
+            else
+            {
+                finalMessagingEntityPath = mappingDetails.Path;
+            }
 
             MessageReceiver messageReceiver = _messagingFactory.CreateMessageReceiver(mappingDetails.Path, mappingDetails.ReceiveMode);
 
@@ -91,9 +117,49 @@ namespace Obvs.AzureServiceBus.Configuration
         {
             MessageTypePathMappingDetails mappingDetails = GetMappingDetails<TMessage>(MessagingEntityType.Queue, MessagingEntityType.Topic);
 
-            MessageSender messageSender = _messagingFactory.CreateMessageSender(mappingDetails.Path);
+            string finalMessagingEntityPath;
+
+            if(mappingDetails.IsDynamic)
+            {
+                finalMessagingEntityPath = CreateDynamicMessagingEntity(mappingDetails);
+            }
+            else
+            {
+                finalMessagingEntityPath = mappingDetails.Path;
+            }
+
+            MessageSender messageSender = _messagingFactory.CreateMessageSender(finalMessagingEntityPath);
 
             return messageSender;
+        }
+
+        private string CreateDynamicMessagingEntity(MessageTypePathMappingDetails mappingDetails)
+        {
+            Process currentProcess = Process.GetCurrentProcess();
+
+            string dynamicEntityName = string.Format("Obvs-DynSub-{0}-{1}-{2}", mappingDetails.MessageType.Name, Environment.MachineName, currentProcess.Id);
+
+            string path;
+            
+            switch(mappingDetails.MessagingEntityType)
+            {
+                case MessagingEntityType.Subscription:
+                    string topicPath = mappingDetails.Path;
+
+                    _namespaceManager.CreateSubscription(new SubscriptionDescription(topicPath, dynamicEntityName)
+                    {
+                        AutoDeleteOnIdle = TimeSpan.FromMinutes(5)
+                    });
+                    
+                    path = topicPath + "/subcriptions/" + dynamicEntityName;
+
+                    break;
+
+                default:
+                    throw new NotSupportedException(string.Format("Unsupported messaging entity type for dynamic creation: {0}", mappingDetails.MessagingEntityType));
+            }
+
+            return path;
         }
 
         private MessageTypePathMappingDetails GetMappingDetails<TMessage>(params MessagingEntityType[] allowedEntityTypes)

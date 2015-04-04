@@ -26,7 +26,10 @@ namespace Obvs.AzureServiceBus.Configuration
     {
         ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage;
         ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string subscriptionPath) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingDynamicSubscriptionFor<TMessage>(string topicPath) where TMessage : IMessage;
+        
+        ICanSpecifyAzureServiceBusMessagingEntity UsingDynamicSubscriptionFor<TMessage>(string topicPath, SubscriptionDescription description) where TMessage : IMessage;
     }
 
     internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusConnectionSettings, ICanSpecifyAzureServiceBusMessagingSettings, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
@@ -34,7 +37,7 @@ namespace Obvs.AzureServiceBus.Configuration
     {
         private readonly ICanAddEndpoint _canAddEndpoint;
         private string _serviceName;
-        private Uri _connectionString;
+        private string _connectionString;
         private MessagingFactorySettings _settings;
         private IMessageSerializer _serializer;
         private IMessageDeserializerFactory _deserializerFactory;
@@ -72,15 +75,9 @@ namespace Obvs.AzureServiceBus.Configuration
             return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _connectionString, _serializer, _deserializerFactory, _messageTypePathMappings, _settings, _assemblyNameContains);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingSettings WithConnectionString(Uri connectionString)
-        {
-            _connectionString = connectionString;
-            return this;
-        }
-
         public ICanSpecifyAzureServiceBusMessagingSettings WithConnectionString(string connectionString)
         {
-            _connectionString = new Uri(connectionString);
+            _connectionString = connectionString;
             return this;
         }
 
@@ -109,11 +106,28 @@ namespace Obvs.AzureServiceBus.Configuration
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string subscriptionPath) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), subscriptionPath, MessagingEntityType.Subscription));
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription));
             return this;
         }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingDynamicSubscriptionFor<TMessage>(string topicPath) where TMessage : IMessage
+        {
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Subscription, ReceiveMode.PeekLock, true));
+
+            return this;
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingDynamicSubscriptionFor<TMessage>(string topicPath, SubscriptionDescription description) where TMessage : IMessage
+        {
+            throw new NotImplementedException(); // NEED: to refactor MessageTypePathMappingDetails to finish supporting this so that there's a way to pass in description
+            
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Subscription, ReceiveMode.PeekLock, true));
+
+            return this;
+        }
+
 
         public ICanCreateEndpointAsClientOrServer FilterMessageTypeAssemblies(string assemblyNameContains)
         {
