@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -79,7 +80,7 @@ namespace Obvs.AzureServiceBus.Tests
 
                 messagePublisher.PublishAsync(message);
 
-                mockMessageSerializer.Verify(ms => ms.Serialize(It.Is<TestMessage>(it => Object.ReferenceEquals(it, message))), Times.Once());
+                mockMessageSerializer.Verify(ms => ms.Serialize(It.IsAny<Stream>(), It.Is<TestMessage>(it => Object.ReferenceEquals(it, message))), Times.Once());
             }
 
             [Fact]
