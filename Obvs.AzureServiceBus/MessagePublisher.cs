@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
@@ -48,16 +49,19 @@ namespace Obvs.AzureServiceBus
         {
             properties.Add(new KeyValuePair<string, object>(MessagePropertyNames.TypeName, message.GetType().Name));
 
-            object data = _serializer.Serialize(message);
-
-            BrokeredMessage brokeredMessage = new BrokeredMessage(data);
-
-            foreach(KeyValuePair<string, object> property in properties)
+            using(MemoryStream messageBodyStream = new MemoryStream())
             {
-                brokeredMessage.Properties.Add(property);
-            }
+                _serializer.Serialize(messageBodyStream, message);
 
-            await _messageSender.SendAsync(brokeredMessage);
+                BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
+
+                foreach(KeyValuePair<string, object> property in properties)
+                {
+                    brokeredMessage.Properties.Add(property);
+                }
+
+                await _messageSender.SendAsync(brokeredMessage);
+            }
         }
     }
 }
