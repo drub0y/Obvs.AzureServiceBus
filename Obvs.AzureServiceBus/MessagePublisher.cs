@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
@@ -53,7 +52,7 @@ namespace Obvs.AzureServiceBus
 
                 BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
 
-                SetCorrelationIdentifierIfApplicable(message, brokeredMessage);
+                SetSessionAndCorrelationIdentifiersIfApplicable(message, brokeredMessage);
             
                 SetProperties(message, properties, brokeredMessage);
 
@@ -71,13 +70,13 @@ namespace Obvs.AzureServiceBus
             }
         }
 
-        private void SetCorrelationIdentifierIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
+        private void SetSessionAndCorrelationIdentifiersIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
         {
             IRequest requestMessage = message as IRequest;
 
             if(requestMessage != null)
             {
-                brokeredMessage.CorrelationId = requestMessage.RequestId;
+                SetRequestSessionAndCorrelationIdentifiers(brokeredMessage, requestMessage);
             }
             else
             {
@@ -85,9 +84,34 @@ namespace Obvs.AzureServiceBus
 
                 if(responseMessage != null)
                 {
-                    brokeredMessage.CorrelationId = responseMessage.RequestId;
-                }
+                    SetResponseSessionAndCorrelationIdentifiers(brokeredMessage, responseMessage);
+                }                
             }
         }
+
+        private static void SetRequestSessionAndCorrelationIdentifiers(BrokeredMessage brokeredMessage, IRequest requestMessage)
+        {
+            string requesterId = requestMessage.RequesterId;
+
+            if(!string.IsNullOrEmpty(requesterId))
+            {
+                brokeredMessage.ReplyToSessionId = requesterId;
+            }
+
+            brokeredMessage.CorrelationId = requestMessage.RequestId;
+        }
+
+        private static void SetResponseSessionAndCorrelationIdentifiers(BrokeredMessage brokeredMessage, IResponse responseMessage)
+        {
+            string requesterId = responseMessage.RequesterId;
+
+            if(!string.IsNullOrEmpty(requesterId))
+            {
+                brokeredMessage.SessionId = requesterId;
+            }
+
+            brokeredMessage.CorrelationId = responseMessage.RequestId;
+        }
+
     }
 }
