@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -62,7 +63,7 @@ namespace Obvs.AzureServiceBus.Tests
 
                 TestMessage testMessage = new TestMessage();
 
-                mockTestMessageDeserializer.Setup(md => md.Deserialize(It.IsAny<object>()))
+                mockTestMessageDeserializer.Setup(md => md.Deserialize(It.IsAny<Stream>()))
                     .Returns(testMessage);
 
                 IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(o =>
@@ -86,7 +87,7 @@ namespace Obvs.AzureServiceBus.Tests
 
                 message.ShouldBeEquivalentTo(testMessage);
 
-                mockTestMessageDeserializer.Verify(md => md.Deserialize(It.IsAny<object>()), Times.Once());
+                mockTestMessageDeserializer.Verify(md => md.Deserialize(It.IsAny<Stream>()), Times.Once());
             }
         }
 

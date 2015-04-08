@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
@@ -46,15 +47,18 @@ namespace Obvs.AzureServiceBus
 
         private async Task Publish(TMessage message, IEnumerable<KeyValuePair<string, object>> properties)
         {
-            object data = _serializer.Serialize(message);
+            using(MemoryStream messageBodyStream = new MemoryStream())
+            {
+                _serializer.Serialize(messageBodyStream, message);
 
-            BrokeredMessage brokeredMessage = new BrokeredMessage(data);
+                BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
 
-            SetCorrelationIdentifierIfApplicable(message, brokeredMessage);
+                SetCorrelationIdentifierIfApplicable(message, brokeredMessage);
             
-            SetProperties(message, properties, brokeredMessage);
+                SetProperties(message, properties, brokeredMessage);
 
-            await _messageSender.SendAsync(brokeredMessage);
+                await _messageSender.SendAsync(brokeredMessage);
+            }
         }
 
         private static void SetProperties(TMessage message, IEnumerable<KeyValuePair<string, object>> properties, BrokeredMessage brokeredMessage)
