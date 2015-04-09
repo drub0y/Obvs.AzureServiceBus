@@ -38,20 +38,22 @@ namespace Obvs.AzureServiceBus
         {
             List<KeyValuePair<string, object>> properties = _propertyProvider.GetProperties(message).ToList();
 
-            return Publish(message, properties);
+            return PublishAsync(message, properties);
         }
 
         public void Dispose()
         {
         }
 
-        private async Task Publish(TMessage message, List<KeyValuePair<string, object>> properties)
+        private async Task PublishAsync(TMessage message, List<KeyValuePair<string, object>> properties)
         {
             properties.Add(new KeyValuePair<string, object>(MessagePropertyNames.TypeName, message.GetType().Name));
 
             using(MemoryStream messageBodyStream = new MemoryStream())
             {
                 _serializer.Serialize(messageBodyStream, message);
+
+                messageBodyStream.Position = 0;
 
                 BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
 
