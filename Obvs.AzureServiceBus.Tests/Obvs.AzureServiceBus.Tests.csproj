@@ -111,6 +111,7 @@
     <Compile Include="EndpointProviderFacts.cs" />
     <Compile Include="MessagingEntityVerifierFacts.cs" />
     <Compile Include="ConfigurationFacts.cs" />
+    <Compile Include="IntegrationTests.cs" />
     <Compile Include="MessagePublisherFacts.cs" />
     <Compile Include="PeekLockMessageControlFacts.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
