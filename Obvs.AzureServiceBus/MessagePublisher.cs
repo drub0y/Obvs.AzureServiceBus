@@ -37,18 +37,20 @@ namespace Obvs.AzureServiceBus
         {
             IEnumerable<KeyValuePair<string, object>> properties = _propertyProvider.GetProperties(message);
 
-            return Publish(message, properties);
+            return PublishAsync(message, properties);
         }
 
         public void Dispose()
         {
         }
 
-        private async Task Publish(TMessage message, IEnumerable<KeyValuePair<string, object>> properties)
+        private async Task PublishAsync(TMessage message, IEnumerable<KeyValuePair<string, object>> properties)
         {
             using(MemoryStream messageBodyStream = new MemoryStream())
             {
                 _serializer.Serialize(messageBodyStream, message);
+
+                messageBodyStream.Position = 0;
 
                 BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
 
@@ -64,10 +66,10 @@ namespace Obvs.AzureServiceBus
         {
             brokeredMessage.Properties.Add(MessagePropertyNames.TypeName, message.GetType().Name);
 
-            foreach(KeyValuePair<string, object> property in properties)
-            {
-                brokeredMessage.Properties.Add(property);
-            }
+                foreach(KeyValuePair<string, object> property in properties)
+                {
+                    brokeredMessage.Properties.Add(property);
+                }
         }
 
         private void SetSessionAndCorrelationIdentifiersIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
