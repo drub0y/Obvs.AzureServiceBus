@@ -37,7 +37,7 @@ namespace Obvs.AzureServiceBus.Configuration
     {
         private readonly ICanAddEndpoint _canAddEndpoint;
         private string _serviceName;
-        private string _connectionString;
+		private string _connectionString;
         private MessagingFactorySettings _settings;
         private IMessageSerializer _serializer;
         private IMessageDeserializerFactory _deserializerFactory;
@@ -75,7 +75,7 @@ namespace Obvs.AzureServiceBus.Configuration
             return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _connectionString, _serializer, _deserializerFactory, _messageTypePathMappings, _settings, _assemblyNameContains);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingSettings WithConnectionString(string connectionString)
+		public ICanSpecifyAzureServiceBusMessagingSettings WithConnectionString(string connectionString)
         {
             _connectionString = connectionString;
             return this;

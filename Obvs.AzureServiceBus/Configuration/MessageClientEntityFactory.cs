@@ -76,7 +76,7 @@ namespace Obvs.AzureServiceBus.Configuration
             get
             {
                 return _isDynamic;
-            }
+    }
         }
     }
     
@@ -162,25 +162,25 @@ namespace Obvs.AzureServiceBus.Configuration
             return path;
         }
 
-        private MessageTypePathMappingDetails GetMappingDetails<TMessage>(params MessagingEntityType[] allowedEntityTypes)
+        private MessageTypePathMappingDetails GetMappingDetails<TMessage>(params MessagingEntityType[] expectedEntityTypes)
         {
             MessageTypePathMappingDetails mappingDetails;
 
             try
             {
                 mappingDetails = (from mtpm in _messageTypePathMappings
-                                  join aet in allowedEntityTypes on mtpm.MessagingEntityType equals aet
+                                  join eet in expectedEntityTypes on mtpm.MessagingEntityType equals eet
                                   where mtpm.MessageType == typeof(TMessage)
                                   select mtpm).SingleOrDefault();
             }
             catch(InvalidOperationException)
             {
-                throw new Exception(string.Format("More than one path mapping exist for message type {0} for allowed entity types {1}", typeof(TMessage).Name, string.Join(", ", allowedEntityTypes)));
+                throw new Exception(string.Format("More than one path mapping exist for message type {0} for expected entity types {1}", typeof(TMessage).Name, string.Join(", ", expectedEntityTypes)));
             }
 
             if(mappingDetails.Equals(default(MessageTypePathMappingDetails)))
             {
-                throw new Exception(string.Format("Missing path mapping for message type {0} for allowed entity types {1}", typeof(TMessage).Name, string.Join(", ", allowedEntityTypes)));
+                throw new Exception(string.Format("Missing path mapping for message type {0} for expected entity types {1}", typeof(TMessage).Name, string.Join(", ", expectedEntityTypes)));
             }
 
             return mappingDetails;
