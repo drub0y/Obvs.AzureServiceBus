@@ -1,9 +1,9 @@
-﻿using Moq;
+﻿using FluentAssertions;
+using Moq;
 using Obvs.AzureServiceBus.Configuration;
 using Obvs.Serialization;
 using Obvs.Types;
 using Xunit;
-using FluentAssertions;
 
 namespace Obvs.AzureServiceBus.Tests
 {
@@ -15,7 +15,7 @@ namespace Obvs.AzureServiceBus.Tests
             IServiceBus serviceBus = ServiceBus.Configure()
                 .WithAzureServiceBusEndpoint<ITestMessage>()
                     .Named("Test Service Bus")
-                    .WithConnectionString("Endpoint=sb://Obvs-AzureSB-Test.servicebus.windows.net/;SharedAccessKeyName=SomeTestPolicyName;SharedAccessKey=SomeSASKey")
+                    .WithConnectionString("Endpoint=sb://obvs-azureservicebus-test.servicebus.windows.net/;SharedAccessKeyName=Test;SharedAccessKey=Test")
                     .UsingQueueFor<ICommand>("commands")
                     .UsingQueueFor<IRequest>("requests")
                     .UsingQueueFor<IResponse>("responses")
