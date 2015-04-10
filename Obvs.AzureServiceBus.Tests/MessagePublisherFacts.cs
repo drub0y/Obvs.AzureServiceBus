@@ -171,9 +171,124 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
+        public class RequestResponseFacts
+        {
+            [Fact]
+            public async Task RequestWithNoRequestorIdOrRequestIdEndsUpWithNoCorrelationData()
+            {
+                Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
+
+                BrokeredMessage brokeredMessageSent = null;
+
+                mockMessageSender.Setup(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()))
+                    .Callback<BrokeredMessage>(bm =>
+                    {
+                        brokeredMessageSent = bm;
+                    })
+                    .Returns(Task.FromResult<object>(null));
+
+                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
+
+                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
+
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+
+                TestRequest request = new TestRequest();
+
+                await messagePublisher.PublishAsync(request);
+
+                mockMessageSender.Verify(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()), Times.Once());
+
+                brokeredMessageSent.Should().NotBeNull();
+                brokeredMessageSent.CorrelationId.Should().BeNull();
+                brokeredMessageSent.ReplyToSessionId.Should().BeNull();
+            }
+            
+            [Fact]
+            public async Task RequestWithRequestIdEndsUpWithCorrelationId()
+            {
+                Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
+
+                BrokeredMessage brokeredMessageSent = null;
+
+                mockMessageSender.Setup(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()))
+                    .Callback<BrokeredMessage>(bm =>
+                    {
+                        brokeredMessageSent = bm;
+                    })
+                    .Returns(Task.FromResult<object>(null));
+
+                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
+
+                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
+
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+
+                TestRequest request = new TestRequest
+                {
+                    RequestId = "TestRequestId"
+                };
+
+                await messagePublisher.PublishAsync(request);
+
+                mockMessageSender.Verify(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()), Times.Once());
+
+                brokeredMessageSent.Should().NotBeNull();
+                brokeredMessageSent.CorrelationId.Should().Be(request.RequestId);
+            }
+
+            [Fact]
+            public async Task RequestRequesterIdEndsUpAsReplyToSessionId()
+            {
+                Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
+
+                BrokeredMessage brokeredMessageSent = null;
+
+                mockMessageSender.Setup(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()))
+                    .Callback<BrokeredMessage>(bm =>
+                    {
+                        brokeredMessageSent = bm;
+                    })
+                    .Returns(Task.FromResult<object>(null));
+
+                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
+
+                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
+
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+
+                TestRequest request = new TestRequest
+                {
+                    RequesterId = "TestRequesterId"
+                };
+
+                await messagePublisher.PublishAsync(request);
+
+                mockMessageSender.Verify(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()), Times.Once());
+
+                brokeredMessageSent.Should().NotBeNull();
+                brokeredMessageSent.ReplyToSessionId.Should().Be(request.RequesterId);
+            }
+        }
+
         public class TestMessage : IMessage
         {
 
+        }
+
+        public class TestRequest : TestMessage, IRequest
+        {
+            public string RequestId
+            {
+                get;
+                set;
+            }
+
+            public string RequesterId
+            {
+                get;
+                set;
+            }
         }
     }
 }
