@@ -72,9 +72,9 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly MessagingFactory _messagingFactory;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings;
 
-        public MessageClientEntityFactory(Uri connectionUri, MessagingFactorySettings settings, List<MessageTypePathMappingDetails> messageTypePathMappings)
+        public MessageClientEntityFactory(string connectionString, MessagingFactorySettings settings, List<MessageTypePathMappingDetails> messageTypePathMappings)
         {
-            _messagingFactory = MessagingFactory.Create(connectionUri, settings);
+            _messagingFactory = MessagingFactory.CreateFromConnectionString(connectionString);
             _messageTypePathMappings = messageTypePathMappings;
         }
 
