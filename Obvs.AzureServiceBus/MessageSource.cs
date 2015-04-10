@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using Microsoft.ServiceBus.Messaging;
-using Obvs.Types;
+using System.Threading.Tasks;
 using HackedBrain.WindowsAzure.ServiceBus.Messaging;
-using Obvs.Serialization;
+using Microsoft.ServiceBus.Messaging;
 using Obvs.MessageProperties;
+using Obvs.Serialization;
+using Obvs.Types;
 
 namespace Obvs.AzureServiceBus
 {
@@ -34,7 +34,29 @@ namespace Obvs.AzureServiceBus
         {
             get
             {
-                return _brokeredMessages.Select(this.Deserialize);
+                return Observable.Create<TMessage>(o =>
+                    {
+                        return (from bm in _brokeredMessages
+                                where IsCorrectMessageType(bm)
+                                select new
+                                {
+                                    BrokeredMessage = bm,
+                                    DeserializedMessage = Deserialize(bm)
+                                })
+                            .Subscribe(
+                                messageParts =>
+                                {
+                                    o.OnNext(messageParts.DeserializedMessage);
+
+                                    messageParts.BrokeredMessage.CompleteAsync().ContinueWith(completeAntecedent =>
+                                        {
+                                            // TODO: figure out how to get an ILogger in here and log failures
+                                        },
+                                        TaskContinuationOptions.OnlyOnFaulted);
+                                },
+                                o.OnError,
+                                o.OnCompleted);
+                    });
             }
         }
 
@@ -50,6 +72,20 @@ namespace Obvs.AzureServiceBus
             _brokeredMessages = brokeredMessages;
             _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
         }
+
+        private bool IsCorrectMessageType(BrokeredMessage brokeredMessage)
+        {
+            object messageTypeName;
+            bool messageTypeMatches = brokeredMessage.Properties.TryGetValue(MessagePropertyNames.TypeName, out messageTypeName);
+
+            if(messageTypeMatches)
+            {
+                messageTypeMatches = _deserializers.ContainsKey((string)messageTypeName);
+            }
+
+            return messageTypeMatches;
+        }
+
 
         private TMessage Deserialize(BrokeredMessage message)
         {
