@@ -16,18 +16,30 @@ namespace Obvs.AzureServiceBus
         where TMessage : IMessage
     {
         private IObservable<BrokeredMessage> _brokeredMessages;
-        private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;        
+        private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
+        private bool _shouldAutoCompleteMessages;        
 
         public MessageSource(MessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+            : this(messageReceiver, deserializers, true)
+        {
+        }
+
+        public MessageSource(MessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, bool shouldAutoCompleteMessages)
         {
             if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
-            
-            Initialize(messageReceiver.WhenMessageReceived(), deserializers);
+            if(shouldAutoCompleteMessages && messageReceiver.Mode != ReceiveMode.PeekLock) throw new ArgumentException("Auto-completion of messages is only supported for ReceiveMode of PeekLock.", "shouldAutoCompleteMessages");
+
+            Initialize(messageReceiver.WhenMessageReceived(), deserializers, shouldAutoCompleteMessages);
         }
 
         public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+            : this(brokeredMessages, deserializers, false)
         {
-            Initialize(brokeredMessages, deserializers);
+        }
+
+        public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, bool shouldAutoCompleteMessages)
+        {
+            Initialize(brokeredMessages, deserializers, shouldAutoCompleteMessages);
         }
 
         public IObservable<TMessage> Messages
@@ -48,11 +60,10 @@ namespace Obvs.AzureServiceBus
                                 {
                                     o.OnNext(messageParts.DeserializedMessage);
 
-                                    messageParts.BrokeredMessage.CompleteAsync().ContinueWith(completeAntecedent =>
-                                        {
-                                            // TODO: figure out how to get an ILogger in here and log failures
-                                        },
-                                        TaskContinuationOptions.OnlyOnFaulted);
+                                    if(_shouldAutoCompleteMessages)
+                                    {
+                                        AutoCompleteBrokeredMessage(messageParts.BrokeredMessage);
+                                    }
                                 },
                                 o.OnError,
                                 o.OnCompleted);
@@ -64,13 +75,14 @@ namespace Obvs.AzureServiceBus
         {
         }
 
-        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, bool shouldAutoCompleteMessages)
         {
             if(brokeredMessages == null) throw new ArgumentNullException("brokeredMessages");
             if(deserializers == null) throw new ArgumentNullException("deserializers");
 
             _brokeredMessages = brokeredMessages;
             _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
+            _shouldAutoCompleteMessages = shouldAutoCompleteMessages;
         }
 
         private bool IsCorrectMessageType(BrokeredMessage brokeredMessage)
@@ -85,7 +97,6 @@ namespace Obvs.AzureServiceBus
 
             return messageTypeMatches;
         }
-
 
         private TMessage Deserialize(BrokeredMessage message)
         {
@@ -112,5 +123,15 @@ namespace Obvs.AzureServiceBus
 
             return deserializedMessage;
         }
+
+        private static void AutoCompleteBrokeredMessage(BrokeredMessage brokeredMessage)
+        {
+            brokeredMessage.CompleteAsync().ContinueWith(completeAntecedent =>
+            {
+                // TODO: figure out how to get an ILogger in here and log failures
+            },
+            TaskContinuationOptions.OnlyOnFaulted);
+        }
+
     }
 }
