@@ -1,6 +1,9 @@
 ﻿using FluentAssertions;
+using Microsoft.ServiceBus;
+using Microsoft.ServiceBus.Messaging;
 using Moq;
 using Obvs.AzureServiceBus.Configuration;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.Serialization;
 using Obvs.Types;
 using Xunit;
@@ -12,16 +15,31 @@ namespace Obvs.AzureServiceBus.Tests
         [Fact]
         public void ConfigureAzureServiceBusEndpoint()
         {
+            Mock<INamespaceManager> mockNamespaceManager = new Mock<INamespaceManager>();
+            mockNamespaceManager.Setup(nsm => nsm.QueueExists(It.IsAny<string>()))
+                .Returns(true);
+            mockNamespaceManager.Setup(nsm => nsm.TopicExists(It.IsAny<string>()))
+                .Returns(true);
+            mockNamespaceManager.Setup(nsm => nsm.SubscriptionExists(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns(true);
+
+            Mock<IMessagingFactory> mockMessagingFactory = new Mock<IMessagingFactory>();
+
+            mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(It.IsAny<string>()))
+                .Returns(new Mock<MessageReceiver>().Object);
+            mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
+                .Returns(new Mock<MessageSender>().Object);
+            
             IServiceBus serviceBus = ServiceBus.Configure()
                 .WithAzureServiceBusEndpoint<ITestMessage>()
                     .Named("Test Service Bus")
-                    .WithConnectionString("Endpoint=sb://obvs-azureservicebus-test.servicebus.windows.net/;SharedAccessKeyName=Test;SharedAccessKey=Test")
+                    .WithNamespaceManager(mockNamespaceManager.Object)
+                    .WithMessagingFactory(mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("commands")
                     .UsingQueueFor<IRequest>("requests")
                     .UsingQueueFor<IResponse>("responses")
                     .UsingTopicFor<IEvent>("events")
-                    //.UsingSubscriptionFor<IEvent>("events", "my-event-subscription")
-                    .UsingDynamicSubscriptionFor<IEvent>("events")
+                    .UsingSubscriptionFor<IEvent>("events", "my-event-subscription")
                     .SerializedWith(Mock.Of<IMessageSerializer>(), Mock.Of<IMessageDeserializerFactory>())
                     .FilterMessageTypeAssemblies("Obvs.AzureServiceBus.Tests")
                     .AsClientAndServer()

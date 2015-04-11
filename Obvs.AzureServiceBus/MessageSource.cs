@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 using HackedBrain.WindowsAzure.ServiceBus.Messaging;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.MessageProperties;
 using Obvs.Serialization;
 using Obvs.Types;
@@ -19,12 +20,12 @@ namespace Obvs.AzureServiceBus
         private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
         private bool _shouldAutoCompleteMessages;        
 
-        public MessageSource(MessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+        public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
             : this(messageReceiver, deserializers, true)
         {
         }
 
-        public MessageSource(MessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, bool shouldAutoCompleteMessages)
+        public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, bool shouldAutoCompleteMessages)
         {
             if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
             if(shouldAutoCompleteMessages && messageReceiver.Mode != ReceiveMode.PeekLock) throw new ArgumentException("Auto-completion of messages is only supported for ReceiveMode of PeekLock.", "shouldAutoCompleteMessages");

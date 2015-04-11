@@ -3,7 +3,7 @@ using Microsoft.ServiceBus.Messaging;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
-    internal interface IMessageSender
+    public interface IMessageSender
     {
         Task SendAsync(BrokeredMessage brokeredMessage);
     }
