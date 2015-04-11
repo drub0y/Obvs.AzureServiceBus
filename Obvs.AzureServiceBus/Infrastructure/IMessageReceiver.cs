@@ -6,11 +6,13 @@ using Microsoft.ServiceBus.Messaging;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
-    public interface IMessageReceiver
+    public interface IMessageReceiver : IDisposable
     {
         ReceiveMode Mode
         {
             get;
         }
+
+        void OnMessage(Action<BrokeredMessage> callback, OnMessageOptions options);
     }
 }

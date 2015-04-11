@@ -18,7 +18,7 @@ namespace Obvs.AzureServiceBus.Configuration
         Subscription = 2
     }
 
-    public struct MessageTypePathMappingDetails
+    public class MessageTypePathMappingDetails
     {
         private readonly Type _messageType;
         private readonly string _path;
@@ -79,6 +79,19 @@ namespace Obvs.AzureServiceBus.Configuration
                 return _isTemporary;
             }
         }
+
+        public sealed class PathComparer : IEqualityComparer<MessageTypePathMappingDetails>
+        {
+            public bool Equals(MessageTypePathMappingDetails x, MessageTypePathMappingDetails y)
+            {
+                return StringComparer.OrdinalIgnoreCase.Equals(x, y);
+            }
+
+            public int GetHashCode(MessageTypePathMappingDetails obj)
+            {
+                return obj.Path.GetHashCode();
+            }
+        }
     }
 
     internal sealed class MessageClientEntityFactory
@@ -86,9 +99,14 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly INamespaceManager _namespaceManager;
         private readonly IMessagingFactory _messagingFactory;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings;
+        private readonly HashSet<MessageTypePathMappingDetails> _verifiedExistingMessagingEntities = new HashSet<MessageTypePathMappingDetails>(new MessageTypePathMappingDetails.PathComparer());
 
         public MessageClientEntityFactory(INamespaceManager namespaceManager, IMessagingFactory messagingFactory, List<MessageTypePathMappingDetails> messageTypePathMappings)
         {
+            if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
+            if(messagingFactory == null) throw new ArgumentNullException("messagingFactory");
+            if(messageTypePathMappings == null) throw new ArgumentNullException("messageTypePathMappings");
+
             _namespaceManager = namespaceManager;
             _messagingFactory = messagingFactory;
             _messageTypePathMappings = messageTypePathMappings;
@@ -153,44 +171,49 @@ namespace Obvs.AzureServiceBus.Configuration
 
         private void EnsureMessagingEntityExistsInternal(MessageTypePathMappingDetails mappingDetails, Action alreadyExistsAction, Action doesntAlreadyExistAction)
         {
-            Func<bool> exists;
-            Action create;
-
-            switch(mappingDetails.MessagingEntityType)
+            if(!_verifiedExistingMessagingEntities.Contains(mappingDetails))
             {
-                case MessagingEntityType.Queue:
-                    exists = () => _namespaceManager.QueueExists(mappingDetails.Path);
-                    create = () => _namespaceManager.CreateQueue(mappingDetails.Path);
+                Func<bool> exists;
+                Action create;
 
-                    break;
+                switch(mappingDetails.MessagingEntityType)
+                {
+                    case MessagingEntityType.Queue:
+                        exists = () => _namespaceManager.QueueExists(mappingDetails.Path);
+                        create = () => _namespaceManager.CreateQueue(mappingDetails.Path);
 
-                case MessagingEntityType.Topic:
-                    exists = () => _namespaceManager.TopicExists(mappingDetails.Path);
-                    create = () => _namespaceManager.CreateTopic(mappingDetails.Path);
+                        break;
 
-                    break;
+                    case MessagingEntityType.Topic:
+                        exists = () => _namespaceManager.TopicExists(mappingDetails.Path);
+                        create = () => _namespaceManager.CreateTopic(mappingDetails.Path);
 
-                case MessagingEntityType.Subscription:
-                    string[] parts = mappingDetails.Path.Split('/');
+                        break;
 
-                    exists = () => _namespaceManager.SubscriptionExists(parts[0], parts[2]);
-                    create = () => _namespaceManager.CreateSubscription(parts[0], parts[2]);
+                    case MessagingEntityType.Subscription:
+                        string[] parts = mappingDetails.Path.Split('/');
 
-                    break;
+                        exists = () => _namespaceManager.SubscriptionExists(parts[0], parts[2]);
+                        create = () => _namespaceManager.CreateSubscription(parts[0], parts[2]);
 
-                default:
-                    throw new NotSupportedException(string.Format("Unsupported messaging entity type, {0}, requested for creation (path {1}).", mappingDetails.MessagingEntityType, mappingDetails.Path));
-            }
+                        break;
 
-            if(exists())
-            {
-                alreadyExistsAction();
-            }
-            else
-            {
-                doesntAlreadyExistAction();
+                    default:
+                        throw new NotSupportedException(string.Format("Unsupported messaging entity type, {0}, requested for creation (path {1}).", mappingDetails.MessagingEntityType, mappingDetails.Path));
+                }
 
-                create();
+                if(exists())
+                {
+                    alreadyExistsAction();
+                }
+                else
+                {
+                    doesntAlreadyExistAction();
+
+                    create();
+                }
+
+                _verifiedExistingMessagingEntities.Add(mappingDetails);
             }
         }
 

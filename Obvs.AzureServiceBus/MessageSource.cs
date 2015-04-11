@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using HackedBrain.WindowsAzure.ServiceBus.Messaging;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.MessageProperties;
@@ -30,7 +30,19 @@ namespace Obvs.AzureServiceBus
             if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
             if(shouldAutoCompleteMessages && messageReceiver.Mode != ReceiveMode.PeekLock) throw new ArgumentException("Auto-completion of messages is only supported for ReceiveMode of PeekLock.", "shouldAutoCompleteMessages");
 
-            Initialize(messageReceiver.WhenMessageReceived(), deserializers, shouldAutoCompleteMessages);
+            IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(o =>
+                {
+                   messageReceiver.OnMessage(
+                       o.OnNext,
+                       new OnMessageOptions
+                       {
+                           AutoComplete = true
+                       });
+       
+                    return Disposable.Create(() => messageReceiver.Dispose());
+                });
+
+            Initialize(brokeredMessages, deserializers, shouldAutoCompleteMessages);
         }
 
         public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)

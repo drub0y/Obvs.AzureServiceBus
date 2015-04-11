@@ -19,6 +19,11 @@ namespace Obvs.AzureServiceBus.Infrastructure
         {
             return _messageSender.SendAsync(brokeredMessage);
         }
+
+        public void Dispose()
+        {
+            _messageSender.Close();
+        }
     }
 
 }

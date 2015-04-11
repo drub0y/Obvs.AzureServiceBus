@@ -22,5 +22,15 @@ namespace Obvs.AzureServiceBus.Infrastructure
                 return _messageReceiver.Mode;
             }
         }
+
+        public void OnMessage(Action<BrokeredMessage> callback, OnMessageOptions options)
+        {
+            _messageReceiver.OnMessage(callback, options);
+        }
+
+        public void Dispose()
+        {
+            _messageReceiver.Close();
+        }
     }
 }

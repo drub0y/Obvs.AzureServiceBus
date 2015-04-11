@@ -43,6 +43,7 @@ namespace Obvs.AzureServiceBus
 
         public void Dispose()
         {
+            _messageSender.Dispose();
         }
 
         private async Task PublishAsync(TMessage message, List<KeyValuePair<string, object>> properties)
