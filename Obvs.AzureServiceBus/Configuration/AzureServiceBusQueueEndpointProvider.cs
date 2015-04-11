@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.Configuration;
 using Obvs.MessageProperties;
 using Obvs.Serialization;
@@ -12,27 +14,22 @@ namespace Obvs.AzureServiceBus.Configuration
 {
     public class AzureServiceBusQueueEndpointProvider<TServiceMessage> : ServiceEndpointProviderBase where TServiceMessage : IMessage
     {
-        private readonly string _connectionString;
         private readonly IMessageSerializer _serializer;
         private readonly IMessageDeserializerFactory _deserializerFactory;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings;
         private readonly string _assemblyNameContains;
-        private readonly MessagingFactorySettings _settings;
+        private readonly INamespaceManager _namespaceManager;
+        private readonly IMessagingFactory _messagingFactory;
 
-        public AzureServiceBusQueueEndpointProvider(string serviceName, string connectionString, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, MessagingFactorySettings settings, string assemblyNameContains)
+        public AzureServiceBusQueueEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, string assemblyNameContains)
             : base(serviceName)
         {
-            _connectionString = connectionString;
+            _namespaceManager = namespaceManager;
+            _messagingFactory = messagingFactory;
             _serializer = serializer;
             _deserializerFactory = deserializerFactory;
             _messageTypePathMappings = messageTypePathMappings;
-            _settings = settings;
             _assemblyNameContains = assemblyNameContains;
-        }
-
-        public AzureServiceBusQueueEndpointProvider(string serviceName, string connectionString, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory)
-            : this(serviceName, connectionString, serializer, deserializerFactory, new List<MessageTypePathMappingDetails>(), new MessagingFactorySettings(), null)
-        {
         }
 
         public List<MessageTypePathMappingDetails> MessageTypePathMappings
@@ -43,18 +40,9 @@ namespace Obvs.AzureServiceBus.Configuration
             }
         }
 
-
-        public MessagingFactorySettings Settings
-        {
-            get
-            {
-                return _settings;
-            }
-        }
-
         public override IServiceEndpoint CreateEndpoint()
         {
-            MessageClientEntityFactory factory = new MessageClientEntityFactory(_connectionString, _settings ?? new MessagingFactorySettings(), _messageTypePathMappings);
+            MessageClientEntityFactory factory = new MessageClientEntityFactory(_namespaceManager, _messagingFactory, _messageTypePathMappings);
 
             return new ServiceEndpoint(
                new MessageSource<IRequest>(factory.CreateMessageReceiver<IRequest>(), _deserializerFactory.Create<IRequest, TServiceMessage>(_assemblyNameContains)),
@@ -67,7 +55,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public override IServiceEndpointClient CreateEndpointClient()
         {
-            MessageClientEntityFactory factory = new MessageClientEntityFactory(_connectionString, _settings ?? new MessagingFactorySettings(), _messageTypePathMappings);
+            MessageClientEntityFactory factory = new MessageClientEntityFactory(_namespaceManager, _messagingFactory, _messageTypePathMappings);
 
             return new ServiceEndpointClient(
                new MessageSource<IEvent>(factory.CreateMessageReceiver<IEvent>(), _deserializerFactory.Create<IEvent, TServiceMessage>(_assemblyNameContains)),

@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.Configuration;
 using Obvs.Serialization;
 using Obvs.Types;
@@ -9,47 +12,53 @@ namespace Obvs.AzureServiceBus.Configuration
 {
     public interface ICanAddAzureServiceBusServiceName
     {
-        ICanSpecifyAzureServiceBusConnectionSettings Named(string serviceName);
+        ICanSpecifyAzureServiceBusNamespace Named(string serviceName);
     }
 
-    public interface ICanSpecifyAzureServiceBusConnectionSettings
+    public interface ICanSpecifyAzureServiceBusNamespace
     {
-        ICanSpecifyAzureServiceBusMessagingSettings WithConnectionString(string connectionString);
+        ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString);
+        ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(INamespaceManager namespaceManager);
+        ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(NamespaceManager namespaceManager);
     }
 
-    public interface ICanSpecifyAzureServiceBusMessagingSettings : ICanSpecifyAzureServiceBusMessagingEntity
+    public interface ICanSpecifyAzureServiceBusMessagingFactory : ICanSpecifyAzureServiceBusMessagingEntity
     {
-        ICanSpecifyAzureServiceBusMessagingEntity WithMessagingSettings(MessagingFactorySettings settings);
+        ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(IMessagingFactory messagingFactory);
+        ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(MessagingFactory messagingFactory);
     }
 
     public interface ICanSpecifyAzureServiceBusMessagingEntity : ICanSpecifyEndpointSerializers
     {
         ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, bool createIfDoesntExist) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage;        
+        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, bool createIfDoesntExist) where TMessage : IMessage;
         ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingDynamicSubscriptionFor<TMessage>(string topicPath) where TMessage : IMessage;
-        
-        ICanSpecifyAzureServiceBusMessagingEntity UsingDynamicSubscriptionFor<TMessage>(string topicPath, SubscriptionDescription description) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, bool createIfDoesntExist) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryQueueFor<TMessage>(string queuePath) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryTopicFor<TMessage>(string topicPath) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath) where TMessage : IMessage;
     }
 
-    internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusConnectionSettings, ICanSpecifyAzureServiceBusMessagingSettings, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
+    internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusNamespace, ICanSpecifyAzureServiceBusMessagingFactory, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
         where TServiceMessage : IMessage
     {
         private readonly ICanAddEndpoint _canAddEndpoint;
         private string _serviceName;
-		private string _connectionString;
-        private MessagingFactorySettings _settings;
         private IMessageSerializer _serializer;
         private IMessageDeserializerFactory _deserializerFactory;
         private string _assemblyNameContains;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings = new List<MessageTypePathMappingDetails>();
+        private IMessagingFactory _messagingFactory;
+        private INamespaceManager _namespaceManager;
 
         public AzureServiceBusQueueFluentConfig(ICanAddEndpoint canAddEndpoint)
         {
             _canAddEndpoint = canAddEndpoint;
         }
 
-        public ICanSpecifyAzureServiceBusConnectionSettings Named(string serviceName)
+        public ICanSpecifyAzureServiceBusNamespace Named(string serviceName)
         {
             _serviceName = serviceName;
             return this;
@@ -72,19 +81,39 @@ namespace Obvs.AzureServiceBus.Configuration
 
         private AzureServiceBusQueueEndpointProvider<TServiceMessage> CreateProvider()
         {
-            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _connectionString, _serializer, _deserializerFactory, _messageTypePathMappings, _settings, _assemblyNameContains);
+            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains);
         }
 
-		public ICanSpecifyAzureServiceBusMessagingSettings WithConnectionString(string connectionString)
+        public ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString)
         {
-            _connectionString = connectionString;
+            return WithNamespaceManager(NamespaceManager.CreateFromConnectionString(connectionString));
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(INamespaceManager namespaceManager)
+        {
+            if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
+            
+            _namespaceManager = namespaceManager;
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity WithMessagingSettings(MessagingFactorySettings settings)
+        public ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(NamespaceManager namespaceManager)
         {
-            _settings = settings;
+            return WithNamespaceManager(new NamespaceManagerWrapper(namespaceManager));
+        }
+
+
+        public ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(IMessagingFactory messagingFactory)
+        {
+            if(messagingFactory == null) throw new ArgumentNullException("messagingFactory");
+            
+            _messagingFactory = messagingFactory;
             return this;
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(MessagingFactory messagingFactory)
+        {
+            return WithMessagingFactory(new MessagingFactoryWrapper(messagingFactory));
         }
 
         public ICanCreateEndpointAsClientOrServer SerializedWith(IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory)
@@ -94,44 +123,62 @@ namespace Obvs.AzureServiceBus.Configuration
             return this;
         }
 
+        public ICanCreateEndpointAsClientOrServer FilterMessageTypeAssemblies(string assemblyNameContains)
+        {
+            _assemblyNameContains = assemblyNameContains;
+            return this;
+        }
+
         public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue));
+            return UsingQueueFor<TMessage>(queuePath, createIfDoesntExist: false);
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, bool createIfDoesntExist) where TMessage : IMessage
+        {
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue, createIfDoesntExist: createIfDoesntExist, isTemporary: false));
             return this;
         }
 
         public ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Topic));
+            return UsingTopicFor<TMessage>(topicPath, createIfDoesntExist: false);
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, bool createIfDoesntExist) where TMessage : IMessage
+        {
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Topic, createIfDoesntExist: createIfDoesntExist, isTemporary: false));
             return this;
         }
 
         public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription));
+            return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, createIfDoesntExist: false);
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, bool createIfDoesntExist) where TMessage : IMessage
+        {
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, createIfDoesntExist: createIfDoesntExist, isTemporary: false));
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingDynamicSubscriptionFor<TMessage>(string topicPath) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryQueueFor<TMessage>(string queuePath) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Subscription, ReceiveMode.PeekLock, true));
-
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue, createIfDoesntExist: true, isTemporary: true));
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingDynamicSubscriptionFor<TMessage>(string topicPath, SubscriptionDescription description) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryTopicFor<TMessage>(string topicPath) where TMessage : IMessage
         {
-            throw new NotImplementedException(); // NEED: to refactor MessageTypePathMappingDetails to finish supporting this so that there's a way to pass in description
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Topic, createIfDoesntExist: true, isTemporary: true));
+            return this;
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath) where TMessage : IMessage
+        {
+            string temporarySubscriptionName = Guid.NewGuid().ToString("D");
             
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Subscription, ReceiveMode.PeekLock, true));
-
-            return this;
-        }
-
-
-        public ICanCreateEndpointAsClientOrServer FilterMessageTypeAssemblies(string assemblyNameContains)
-        {
-            _assemblyNameContains = assemblyNameContains;
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + temporarySubscriptionName, MessagingEntityType.Subscription, createIfDoesntExist: true, isTemporary: true));
             return this;
         }
     }

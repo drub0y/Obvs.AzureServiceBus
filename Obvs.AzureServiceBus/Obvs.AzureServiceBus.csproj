@@ -73,6 +73,12 @@
     <Compile Include="Configuration\AzureServiceBusQueueEndpointProvider.cs" />
     <Compile Include="Configuration\AzureServiceBusQueueFluentConfig.cs" />
     <Compile Include="Configuration\MessageClientEntityFactory.cs" />
+    <Compile Include="Infrastructure\IMessageReceiver.cs" />
+    <Compile Include="Infrastructure\MessageReceiverWrapper.cs" />
+    <Compile Include="Infrastructure\MessagingFactoryWrapper.cs" />
+    <Compile Include="Infrastructure\IMessagingFactory.cs" />
+    <Compile Include="Infrastructure\NamespaceManagerWrapper.cs" />
+    <Compile Include="Infrastructure\INamespaceManager.cs" />
     <Compile Include="Infrastructure\IMessageSender.cs" />
     <Compile Include="Infrastructure\MessageSenderWrapper.cs" />
     <Compile Include="MessagePublisher.cs" />

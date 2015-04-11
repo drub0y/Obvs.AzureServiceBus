@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Infrastructure;
 
 namespace Obvs.AzureServiceBus.Configuration
 {
@@ -22,21 +23,21 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly Type _messageType;
         private readonly string _path;
         private readonly MessagingEntityType _messagingEntityType;
-        private readonly ReceiveMode _receiveMode;
-        private readonly bool _isDynamic;
+        private readonly bool _isTemporary;
+        private readonly bool _createIfDoesntExist;
 
         public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType)
-            : this(messageType, path, messagingEntityType, ReceiveMode.PeekLock, false)
+            : this(messageType, path, messagingEntityType, createIfDoesntExist: false, isTemporary: false)
         {
         }
 
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, ReceiveMode receiveMode, bool isDynamic)
+        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, bool createIfDoesntExist, bool isTemporary)
         {
             _messageType = messageType;
             _path = path;
             _messagingEntityType = messagingEntityType;
-            _receiveMode = receiveMode;
-            _isDynamic = isDynamic;
+            _createIfDoesntExist = createIfDoesntExist;
+            _isTemporary = isTemporary;
         }
 
         public Type MessageType
@@ -55,14 +56,6 @@ namespace Obvs.AzureServiceBus.Configuration
             }
         }
 
-        public ReceiveMode ReceiveMode
-        {
-            get
-            {
-                return _receiveMode;
-            }
-        }
-
         public MessagingEntityType MessagingEntityType
         {
             get
@@ -71,95 +64,134 @@ namespace Obvs.AzureServiceBus.Configuration
             }
         }
 
-        public bool IsDynamic
+        public bool CreateIfDoesntExist
         {
             get
             {
-                return _isDynamic;
-    }
+                return _createIfDoesntExist;
+            }
+        }
+
+        public bool IsTemporary
+        {
+            get
+            {
+                return _isTemporary;
+            }
         }
     }
-    
+
     internal sealed class MessageClientEntityFactory
     {
-        private readonly NamespaceManager _namespaceManager;
-        private readonly MessagingFactory _messagingFactory;
+        private readonly INamespaceManager _namespaceManager;
+        private readonly IMessagingFactory _messagingFactory;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings;
 
-        public MessageClientEntityFactory(string connectionString, MessagingFactorySettings settings, List<MessageTypePathMappingDetails> messageTypePathMappings)
+        public MessageClientEntityFactory(INamespaceManager namespaceManager, IMessagingFactory messagingFactory, List<MessageTypePathMappingDetails> messageTypePathMappings)
         {
-            _namespaceManager = NamespaceManager.CreateFromConnectionString(connectionString);
-            _messagingFactory = MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider);
+            _namespaceManager = namespaceManager;
+            _messagingFactory = messagingFactory;
             _messageTypePathMappings = messageTypePathMappings;
         }
 
-        public MessageReceiver CreateMessageReceiver<TMessage>()
+        public IMessageReceiver CreateMessageReceiver<TMessage>()
         {
             MessageTypePathMappingDetails mappingDetails = GetMappingDetails<TMessage>(MessagingEntityType.Queue, MessagingEntityType.Subscription);
 
-            string finalMessagingEntityPath;
+            EnsureMessagingEntityExists(mappingDetails);
 
-            if(mappingDetails.IsDynamic)
-            {
-                finalMessagingEntityPath = CreateDynamicMessagingEntity(mappingDetails);
-            }
-            else
-            {
-                finalMessagingEntityPath = mappingDetails.Path;
-            }
-
-            MessageReceiver messageReceiver = _messagingFactory.CreateMessageReceiver(mappingDetails.Path, mappingDetails.ReceiveMode);
-
-            return messageReceiver;
+            return _messagingFactory.CreateMessageReceiver(mappingDetails.Path);
         }
 
-        public MessageSender CreateMessageSender<TMessage>()
+        public IMessageSender CreateMessageSender<TMessage>()
         {
             MessageTypePathMappingDetails mappingDetails = GetMappingDetails<TMessage>(MessagingEntityType.Queue, MessagingEntityType.Topic);
 
-            string finalMessagingEntityPath;
+            EnsureMessagingEntityExists(mappingDetails);
 
-            if(mappingDetails.IsDynamic)
+            return _messagingFactory.CreateMessageSender(mappingDetails.Path);
+        }
+
+        private void EnsureMessagingEntityExists(MessageTypePathMappingDetails mappingDetails)
+        {
+            if(mappingDetails.CreateIfDoesntExist)
             {
-                finalMessagingEntityPath = CreateDynamicMessagingEntity(mappingDetails);
+                EnsureMessagingEntityExistsInternal(
+                    mappingDetails,
+                    alreadyExistsAction: () =>
+                    {
+                        if(mappingDetails.IsTemporary)
+                        {
+                            throw new Exception(string.Format("A messaging entity with a path of \"{0}\" of type {1} already exists. To ensure intent and keep your data safe the framwork cannot recrate it as temporary. You must manually delete the entity if you want to specify it as a temporary again.", mappingDetails.Path, mappingDetails.MessagingEntityType));
+                        }
+                    },
+                    doesntAlreadyExistAction: () =>
+                    {
+                        // TODO: log
+                    });
+
             }
             else
             {
-                finalMessagingEntityPath = mappingDetails.Path;
+                EnsureMessagingEntityExistsInternal(
+                    mappingDetails,
+                    alreadyExistsAction: () =>
+                    {
+                        // TODO: log
+                    },
+                    doesntAlreadyExistAction: () =>
+                    {
+                        // TODO: log
+
+                        if(!mappingDetails.IsTemporary)
+                        {
+                            throw new Exception(string.Format("A messaging entity with a path of \"{0}\" of type {1} does not exist.", mappingDetails.Path, mappingDetails.MessagingEntityType));
+                        }
+                    });
             }
-
-            MessageSender messageSender = _messagingFactory.CreateMessageSender(finalMessagingEntityPath);
-
-            return messageSender;
         }
 
-        private string CreateDynamicMessagingEntity(MessageTypePathMappingDetails mappingDetails)
+        private void EnsureMessagingEntityExistsInternal(MessageTypePathMappingDetails mappingDetails, Action alreadyExistsAction, Action doesntAlreadyExistAction)
         {
-            Process currentProcess = Process.GetCurrentProcess();
+            Func<bool> exists;
+            Action create;
 
-            string dynamicEntityName = string.Format("Obvs-DynSub-{0}-{1}-{2}", mappingDetails.MessageType.Name, Environment.MachineName, currentProcess.Id);
-
-            string path;
-            
             switch(mappingDetails.MessagingEntityType)
             {
-                case MessagingEntityType.Subscription:
-                    string topicPath = mappingDetails.Path;
+                case MessagingEntityType.Queue:
+                    exists = () => _namespaceManager.QueueExists(mappingDetails.Path);
+                    create = () => _namespaceManager.CreateQueue(mappingDetails.Path);
 
-                    _namespaceManager.CreateSubscription(new SubscriptionDescription(topicPath, dynamicEntityName)
-                    {
-                        AutoDeleteOnIdle = TimeSpan.FromMinutes(5)
-                    });
-                    
-                    path = topicPath + "/subcriptions/" + dynamicEntityName;
+                    break;
+
+                case MessagingEntityType.Topic:
+                    exists = () => _namespaceManager.TopicExists(mappingDetails.Path);
+                    create = () => _namespaceManager.CreateTopic(mappingDetails.Path);
+
+                    break;
+
+                case MessagingEntityType.Subscription:
+                    string[] parts = mappingDetails.Path.Split('/');
+
+                    exists = () => _namespaceManager.SubscriptionExists(parts[0], parts[2]);
+                    create = () => _namespaceManager.CreateSubscription(parts[0], parts[2]);
 
                     break;
 
                 default:
-                    throw new NotSupportedException(string.Format("Unsupported messaging entity type for dynamic creation: {0}", mappingDetails.MessagingEntityType));
+                    throw new NotSupportedException(string.Format("Unsupported messaging entity type, {0}, requested for creation (path {1}).", mappingDetails.MessagingEntityType, mappingDetails.Path));
             }
 
-            return path;
+            if(exists())
+            {
+                alreadyExistsAction();
+            }
+            else
+            {
+                doesntAlreadyExistAction();
+
+                create();
+            }
         }
 
         private MessageTypePathMappingDetails GetMappingDetails<TMessage>(params MessagingEntityType[] expectedEntityTypes)
