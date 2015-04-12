@@ -81,11 +81,18 @@ namespace Obvs.AzureServiceBus.Configuration
 
         private AzureServiceBusQueueEndpointProvider<TServiceMessage> CreateProvider()
         {
+            if(_messagingFactory == null)
+            {
+                _messagingFactory = new MessagingFactoryWrapper(MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider));
+            }
+            
             return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains);
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString)
         {
+            if(connectionString == null) throw new ArgumentNullException("connectionString");
+            
             return WithNamespaceManager(NamespaceManager.CreateFromConnectionString(connectionString));
         }
 
@@ -99,6 +106,8 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(NamespaceManager namespaceManager)
         {
+            if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
+            
             return WithNamespaceManager(new NamespaceManagerWrapper(namespaceManager));
         }
 

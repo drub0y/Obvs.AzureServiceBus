@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.ServiceBus;
-using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
 
 namespace Obvs.AzureServiceBus.Configuration
@@ -106,6 +100,7 @@ namespace Obvs.AzureServiceBus.Configuration
             if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
             if(messagingFactory == null) throw new ArgumentNullException("messagingFactory");
             if(messageTypePathMappings == null) throw new ArgumentNullException("messageTypePathMappings");
+            if(messageTypePathMappings.Count == 0) throw new ArgumentException("No message types have been mapped.", "messageTypePathMappings");
 
             _namespaceManager = namespaceManager;
             _messagingFactory = messagingFactory;
@@ -116,18 +111,44 @@ namespace Obvs.AzureServiceBus.Configuration
         {
             MessageTypePathMappingDetails mappingDetails = GetMappingDetails<TMessage>(MessagingEntityType.Queue, MessagingEntityType.Subscription);
 
-            EnsureMessagingEntityExists(mappingDetails);
+            IMessageReceiver messageReceiver;
 
-            return _messagingFactory.CreateMessageReceiver(mappingDetails.Path);
+            if(mappingDetails != null)
+            {
+                EnsureMessagingEntityExists(mappingDetails);
+                
+                messageReceiver = _messagingFactory.CreateMessageReceiver(mappingDetails.Path);
+            }
+            else
+            {
+                // TODO: log
+
+                messageReceiver = UnconfiguredMessageReceiver<TMessage>.Default;
+            }
+
+            return messageReceiver;
         }
 
         public IMessageSender CreateMessageSender<TMessage>()
         {
             MessageTypePathMappingDetails mappingDetails = GetMappingDetails<TMessage>(MessagingEntityType.Queue, MessagingEntityType.Topic);
 
-            EnsureMessagingEntityExists(mappingDetails);
+            IMessageSender messageSender;
+            
+            if(mappingDetails != null)
+            {
+                EnsureMessagingEntityExists(mappingDetails);
+                
+                messageSender = _messagingFactory.CreateMessageSender(mappingDetails.Path);
+            }
+            else
+            {
+                // TODO: log
 
-            return _messagingFactory.CreateMessageSender(mappingDetails.Path);
+                messageSender = UnconfiguredMessageSender<TMessage>.Default;
+            }
+
+            return messageSender;
         }
 
         private void EnsureMessagingEntityExists(MessageTypePathMappingDetails mappingDetails)
@@ -228,14 +249,9 @@ namespace Obvs.AzureServiceBus.Configuration
                                   where mtpm.MessageType == typeof(TMessage)
                                   select mtpm).SingleOrDefault();
             }
-            catch(InvalidOperationException)
+            catch(InvalidOperationException exception)
             {
-                throw new Exception(string.Format("More than one path mapping exist for message type {0} for expected entity types {1}", typeof(TMessage).Name, string.Join(", ", expectedEntityTypes)));
-            }
-
-            if(mappingDetails.Equals(default(MessageTypePathMappingDetails)))
-            {
-                throw new Exception(string.Format("Missing path mapping for message type {0} for expected entity types {1}", typeof(TMessage).Name, string.Join(", ", expectedEntityTypes)));
+                throw new MoreThanOneMappingExistsForMessageTypeException(typeof(TMessage), expectedEntityTypes, exception);
             }
 
             return mappingDetails;
