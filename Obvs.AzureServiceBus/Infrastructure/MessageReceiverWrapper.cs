@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
 
 namespace Obvs.AzureServiceBus.Infrastructure
@@ -23,9 +20,17 @@ namespace Obvs.AzureServiceBus.Infrastructure
             }
         }
 
-        public void OnMessage(Action<BrokeredMessage> callback, OnMessageOptions options)
+        public bool IsClosed
         {
-            _messageReceiver.OnMessage(callback, options);
+            get
+            {
+                return _messageReceiver.IsClosed;
+            }
+        }
+
+        public Task<BrokeredMessage> ReceiveAsync()
+        {
+            return _messageReceiver.ReceiveAsync();
         }
 
         public void Dispose()

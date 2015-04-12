@@ -1,6 +1,4 @@
 ﻿using FluentAssertions;
-using Microsoft.ServiceBus;
-using Microsoft.ServiceBus.Messaging;
 using Moq;
 using Obvs.AzureServiceBus.Configuration;
 using Obvs.AzureServiceBus.Infrastructure;
@@ -26,9 +24,9 @@ namespace Obvs.AzureServiceBus.Tests
             Mock<IMessagingFactory> mockMessagingFactory = new Mock<IMessagingFactory>();
 
             mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(It.IsAny<string>()))
-                .Returns(new Mock<MessageReceiver>().Object);
+                .Returns(new Mock<IMessageReceiver>().Object);
             mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
-                .Returns(new Mock<MessageSender>().Object);
+                .Returns(new Mock<IMessageSender>().Object);
             
             IServiceBus serviceBus = ServiceBus.Configure()
                 .WithAzureServiceBusEndpoint<ITestMessage>()
@@ -46,6 +44,27 @@ namespace Obvs.AzureServiceBus.Tests
                 .Create();
 
             serviceBus.Should().NotBeNull();
+
+            mockNamespaceManager.Verify(nsm => nsm.QueueExists("commands"), Times.Once());
+            mockNamespaceManager.Verify(nsm => nsm.QueueExists("requests"), Times.Once());
+            mockNamespaceManager.Verify(nsm => nsm.QueueExists("responses"), Times.Once());
+            mockNamespaceManager.Verify(nsm => nsm.TopicExists("events"), Times.Once());
+            mockNamespaceManager.Verify(nsm => nsm.SubscriptionExists("events", "my-event-subscription"), Times.Once());
+
+            mockMessagingFactory.Verify(mf => mf.CreateMessageSender("commands"), Times.Once());
+            mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("commands"), Times.Once());
+
+            mockMessagingFactory.Verify(mf => mf.CreateMessageSender("requests"), Times.Once());
+            mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("requests"), Times.Once());
+
+            mockMessagingFactory.Verify(mf => mf.CreateMessageSender("responses"), Times.Once());
+            mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("responses"), Times.Once());
+
+            mockMessagingFactory.Verify(mf => mf.CreateMessageSender("events"), Times.Once());
+            mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events"), Times.Never);
+
+            mockMessagingFactory.Verify(mf => mf.CreateMessageSender("events/subscriptions/my-event-subscription"), Times.Never);
+            mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events/subscriptions/my-event-subscription"), Times.Once());
         }
 
         public interface ITestMessage : IMessage
