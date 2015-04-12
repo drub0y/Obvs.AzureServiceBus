@@ -19,19 +19,26 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly MessagingEntityType _messagingEntityType;
         private readonly bool _isTemporary;
         private readonly bool _createIfDoesntExist;
+        private readonly bool _canDeleteTemporaryIfAlreadyExists;
 
         public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType)
-            : this(messageType, path, messagingEntityType, createIfDoesntExist: false, isTemporary: false)
+            : this(messageType, path, messagingEntityType, createIfDoesntExist: false)
         {
         }
 
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, bool createIfDoesntExist, bool isTemporary)
+        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, bool createIfDoesntExist)
+            : this(messageType, path, messagingEntityType, createIfDoesntExist, isTemporary: false, canDeleteTemporaryIfAlreadyExists: false)
+        {
+        }
+
+        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, bool createIfDoesntExist, bool isTemporary, bool canDeleteTemporaryIfAlreadyExists)
         {
             _messageType = messageType;
             _path = path;
             _messagingEntityType = messagingEntityType;
             _createIfDoesntExist = createIfDoesntExist;
             _isTemporary = isTemporary;
+            _canDeleteTemporaryIfAlreadyExists = canDeleteTemporaryIfAlreadyExists;
         }
 
         public Type MessageType
@@ -71,6 +78,14 @@ namespace Obvs.AzureServiceBus.Configuration
             get
             {
                 return _isTemporary;
+            }
+        }
+
+        public bool CanDeleteTemporaryIfAlreadyExists
+        {
+            get
+            {
+                return _canDeleteTemporaryIfAlreadyExists;
             }
         }
 
@@ -153,69 +168,38 @@ namespace Obvs.AzureServiceBus.Configuration
 
         private void EnsureMessagingEntityExists(MessageTypePathMappingDetails mappingDetails)
         {
-            if(mappingDetails.CreateIfDoesntExist)
-            {
-                EnsureMessagingEntityExistsInternal(
-                    mappingDetails,
-                    alreadyExistsAction: () =>
-                    {
-                        if(mappingDetails.IsTemporary)
-                        {
-                            throw new Exception(string.Format("A messaging entity with a path of \"{0}\" of type {1} already exists. To ensure intent and keep your data safe the framwork cannot recrate it as temporary. You must manually delete the entity if you want to specify it as a temporary again.", mappingDetails.Path, mappingDetails.MessagingEntityType));
-                        }
-                    },
-                    doesntAlreadyExistAction: () =>
-                    {
-                        // TODO: log
-                    });
-
-            }
-            else
-            {
-                EnsureMessagingEntityExistsInternal(
-                    mappingDetails,
-                    alreadyExistsAction: () =>
-                    {
-                        // TODO: log
-                    },
-                    doesntAlreadyExistAction: () =>
-                    {
-                        // TODO: log
-
-                        if(!mappingDetails.IsTemporary)
-                        {
-                            throw new Exception(string.Format("A messaging entity with a path of \"{0}\" of type {1} does not exist.", mappingDetails.Path, mappingDetails.MessagingEntityType));
-                        }
-                    });
-            }
-        }
-
-        private void EnsureMessagingEntityExistsInternal(MessageTypePathMappingDetails mappingDetails, Action alreadyExistsAction, Action doesntAlreadyExistAction)
-        {
             if(!_verifiedExistingMessagingEntities.Contains(mappingDetails))
             {
                 Func<bool> exists;
                 Action create;
+                Action delete;
+
+                string path = mappingDetails.Path;
 
                 switch(mappingDetails.MessagingEntityType)
                 {
                     case MessagingEntityType.Queue:
-                        exists = () => _namespaceManager.QueueExists(mappingDetails.Path);
-                        create = () => _namespaceManager.CreateQueue(mappingDetails.Path);
+                        exists = () => _namespaceManager.QueueExists(path);
+                        create = () => _namespaceManager.CreateQueue(path);
+                        delete = () => _namespaceManager.DeleteQueue(path);
 
                         break;
 
                     case MessagingEntityType.Topic:
-                        exists = () => _namespaceManager.TopicExists(mappingDetails.Path);
-                        create = () => _namespaceManager.CreateTopic(mappingDetails.Path);
+                        exists = () => _namespaceManager.TopicExists(path);
+                        create = () => _namespaceManager.CreateTopic(path);
+                        delete = () => _namespaceManager.DeleteTopic(path);
 
                         break;
 
                     case MessagingEntityType.Subscription:
-                        string[] parts = mappingDetails.Path.Split('/');
+                        string[] parts = path.Split('/');
+                        string topicPath = parts[0];
+                        string subscriptionName = parts[2];
 
-                        exists = () => _namespaceManager.SubscriptionExists(parts[0], parts[2]);
-                        create = () => _namespaceManager.CreateSubscription(parts[0], parts[2]);
+                        exists = () => _namespaceManager.SubscriptionExists(topicPath, subscriptionName);
+                        create = () => _namespaceManager.CreateSubscription(topicPath, subscriptionName);
+                        delete = () => _namespaceManager.DeleteSubscription(topicPath, subscriptionName);
 
                         break;
 
@@ -225,13 +209,35 @@ namespace Obvs.AzureServiceBus.Configuration
 
                 if(exists())
                 {
-                    alreadyExistsAction();
-                }
-                else
-                {
-                    doesntAlreadyExistAction();
+                    if(mappingDetails.IsTemporary)
+                    {
+                        if(!mappingDetails.CanDeleteTemporaryIfAlreadyExists)
+                        {
+                            throw new MessagingEntityAlreadyExistsException(mappingDetails.Path, mappingDetails.MessagingEntityType);
+                        }
 
+                        try
+                        {
+                            delete();
+                        }
+                        catch(UnauthorizedAccessException exception)
+                        {
+                            throw new UnauthorizedAccessException(string.Format("Unable to delete temporary messaging that already exists at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
+                        }
+                    };
+                }
+                else if(!mappingDetails.CreateIfDoesntExist)
+                {
+                    throw new MessagingEntityDoesNotAlreadyExistException(mappingDetails.Path, mappingDetails.MessagingEntityType);
+                }
+
+                try
+                {
                     create();
+                }
+                catch(UnauthorizedAccessException exception)
+                {
+                    throw new UnauthorizedAccessException(string.Format("Unable to create messaging entity at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
                 }
 
                 _verifiedExistingMessagingEntities.Add(mappingDetails);

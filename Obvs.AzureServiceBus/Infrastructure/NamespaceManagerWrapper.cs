@@ -39,6 +39,11 @@ namespace Obvs.AzureServiceBus.Infrastructure
             _namespaceManager.CreateQueue(path);
         }
 
+        public void DeleteQueue(string path)
+        {
+            _namespaceManager.DeleteQueue(path);
+        }
+
         public bool TopicExists(string path)
         {
             return _namespaceManager.TopicExists(path);
@@ -49,6 +54,11 @@ namespace Obvs.AzureServiceBus.Infrastructure
             _namespaceManager.CreateTopic(path);
         }
 
+        public void DeleteTopic(string path)
+        {
+            _namespaceManager.DeleteTopic(path);
+        }
+
         public bool SubscriptionExists(string topicPath, string subscriptionName)
         {
             return _namespaceManager.SubscriptionExists(topicPath, subscriptionName);
@@ -57,6 +67,11 @@ namespace Obvs.AzureServiceBus.Infrastructure
         public void CreateSubscription(string topicPath, string subscriptionName)
         {
             _namespaceManager.CreateSubscription(topicPath, subscriptionName);
+        }
+
+        public void DeleteSubscription(string topicPath, string subscriptionName)
+        {
+            _namespaceManager.DeleteSubscription(topicPath, subscriptionName);
         }
     }
 }

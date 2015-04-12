@@ -18,9 +18,12 @@ namespace Obvs.AzureServiceBus.Infrastructure
 
         bool QueueExists(string path);
         void CreateQueue(string path);
+        void DeleteQueue(string path);
         bool TopicExists(string path);
+        void DeleteTopic(string path);
         void CreateTopic(string path);
         bool SubscriptionExists(string topicPath, string subscriptionName);
         void CreateSubscription(string topicPath, string subscriptionName);
+        void DeleteSubscription(string topicPath, string subscriptionName);
     }
 }
