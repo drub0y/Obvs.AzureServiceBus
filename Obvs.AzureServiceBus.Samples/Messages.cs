@@ -10,8 +10,13 @@ namespace Obvs.AzureServiceBus.Samples
     {
     }
 
-    public class SampleComand : ISampleMessage, ICommand
+    public class SampleCommand : ISampleMessage, ICommand
     {
+        public string CommandId
+        {
+            get;
+            set;
+        }
     }
 
     public class SampleEvent : ISampleMessage, IEvent

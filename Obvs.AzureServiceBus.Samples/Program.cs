@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Obvs.AzureServiceBus.Configuration;
 using Obvs.Serialization.Json;
 using Obvs.Types;
@@ -20,7 +18,7 @@ namespace Obvs.AzureServiceBus.Samples
                 .WithAzureServiceBusEndpoint<ISampleMessage>()
                 .Named("Sample Message Bus")
                 .WithConnectionString(Program.GetConnectionString())
-                .UsingTemporaryQueueFor<ICommand>(BuildMessagingEntityName("commands"))
+                .UsingTemporaryQueueFor<ICommand>(BuildMessagingEntityName("commands"), canDeleteIfAlreadyExists: true)
                 //.UsingTemporaryQueueFor<IRequest>(BuildMessagingEntityName("requests"))
                 //.UsingTemporaryQueueFor<IResponse>(BuildMessagingEntityName("responses"))
                 //.UsingTemporaryQueueFor<IEvent>(BuildMessagingEntityName("events"))
@@ -30,15 +28,21 @@ namespace Obvs.AzureServiceBus.Samples
                 .UsingDebugLogging()
                 .Create();
 
-            IDisposable comandsSubscription = serviceBus.Commands.Subscribe(c =>
+            IDisposable comandsSubscription = serviceBus.Commands.SubscribeOn(TaskPoolScheduler.Default)
+                .OfType<SampleCommand>()
+                .Subscribe(c =>
                 {
-                    Console.WriteLine("Got a command!");   
+                    Console.WriteLine("Got command: {0}", c.CommandId);   
                 });
 
-            IDisposable commandSenderSubscription = Observable.Interval(TimeSpan.FromSeconds(5))
+            IDisposable commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(250)).SubscribeOn(TaskPoolScheduler.Default)
                 .Subscribe(l =>
                     {
-                        serviceBus.SendAsync(new SampleComand());
+                        Console.WriteLine("Sending command...");
+                        serviceBus.SendAsync(new SampleCommand
+                            {
+                                CommandId = Guid.NewGuid().ToString("D")
+                            });
                     });
 
             Console.WriteLine("Hit any key to stop...");
@@ -52,6 +56,7 @@ namespace Obvs.AzureServiceBus.Samples
             Console.ReadKey(true);
         }
 
+
         private static string BuildMessagingEntityName(string entityName)
         {
             return string.Format(MessagingEntityNameFormat, entityName);
@@ -63,7 +68,7 @@ namespace Obvs.AzureServiceBus.Samples
 
             if(result == null)
             {
-                result = Environment.GetEnvironmentVariable("AzureServiceBusSamples.ConnectionString");
+                result = Environment.GetEnvironmentVariable("Obvs.AzureServiceBus.Samples.ConnectionString");
             }
 
             if(string.IsNullOrWhiteSpace(result))
