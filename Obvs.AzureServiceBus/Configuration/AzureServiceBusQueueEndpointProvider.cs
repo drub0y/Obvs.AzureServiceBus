@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.Configuration;
 using Obvs.MessageProperties;
 using Obvs.Serialization;
@@ -12,68 +14,38 @@ namespace Obvs.AzureServiceBus.Configuration
 {
     public class AzureServiceBusQueueEndpointProvider<TServiceMessage> : ServiceEndpointProviderBase where TServiceMessage : IMessage
     {
-        private readonly string _connectionString;
         private readonly IMessageSerializer _serializer;
         private readonly IMessageDeserializerFactory _deserializerFactory;
-        private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings;
         private readonly string _assemblyNameContains;
-        private readonly MessagingFactorySettings _settings;
+        private readonly MessageClientEntityFactory _messageClientEntityFactory;
 
-        public AzureServiceBusQueueEndpointProvider(string serviceName, string connectionString, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, MessagingFactorySettings settings, string assemblyNameContains)
+        public AzureServiceBusQueueEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, string assemblyNameContains)
             : base(serviceName)
         {
-            _connectionString = connectionString;
             _serializer = serializer;
             _deserializerFactory = deserializerFactory;
-            _messageTypePathMappings = messageTypePathMappings;
-            _settings = settings;
             _assemblyNameContains = assemblyNameContains;
-        }
-
-        public AzureServiceBusQueueEndpointProvider(string serviceName, string connectionString, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory)
-            : this(serviceName, connectionString, serializer, deserializerFactory, new List<MessageTypePathMappingDetails>(), new MessagingFactorySettings(), null)
-        {
-        }
-
-        public List<MessageTypePathMappingDetails> MessageTypePathMappings
-        {
-            get
-            {
-                return _messageTypePathMappings;
-            }
-        }
-
-
-        public MessagingFactorySettings Settings
-        {
-            get
-            {
-                return _settings;
-            }
+            _messageClientEntityFactory = new MessageClientEntityFactory(namespaceManager, messagingFactory, messageTypePathMappings);
         }
 
         public override IServiceEndpoint CreateEndpoint()
         {
-            MessageClientEntityFactory factory = new MessageClientEntityFactory(_connectionString, _settings ?? new MessagingFactorySettings(), _messageTypePathMappings);
-
             return new ServiceEndpoint(
-               new MessageSource<IRequest>(factory.CreateMessageReceiver<IRequest>(), _deserializerFactory.Create<IRequest, TServiceMessage>(_assemblyNameContains)),
-               new MessageSource<ICommand>(factory.CreateMessageReceiver<ICommand>(), _deserializerFactory.Create<ICommand, TServiceMessage>(_assemblyNameContains)),
-               new MessagePublisher<IEvent>(factory.CreateMessageSender<IEvent>(), _serializer, new DefaultPropertyProvider<IEvent>()),
-               new MessagePublisher<IResponse>(factory.CreateMessageSender<IResponse>(), _serializer, new DefaultPropertyProvider<IResponse>()),
+               new MessageSource<IRequest>(_messageClientEntityFactory.CreateMessageReceiver<IRequest>(), _deserializerFactory.Create<IRequest, TServiceMessage>(_assemblyNameContains)),
+               new MessageSource<ICommand>(_messageClientEntityFactory.CreateMessageReceiver<ICommand>(), _deserializerFactory.Create<ICommand, TServiceMessage>(_assemblyNameContains)),
+               new MessagePublisher<IEvent>(_messageClientEntityFactory.CreateMessageSender<IEvent>(), _serializer, new DefaultPropertyProvider<IEvent>()),
+               new MessagePublisher<IResponse>(_messageClientEntityFactory.CreateMessageSender<IResponse>(), _serializer, new DefaultPropertyProvider<IResponse>()),
                typeof(TServiceMessage));
         }
 
 
         public override IServiceEndpointClient CreateEndpointClient()
         {
-            MessageClientEntityFactory factory = new MessageClientEntityFactory(_connectionString, _settings ?? new MessagingFactorySettings(), _messageTypePathMappings);
-
             return new ServiceEndpointClient(
-               new MessageSource<IEvent>(factory.CreateMessageReceiver<IEvent>(), _deserializerFactory.Create<IEvent, TServiceMessage>(_assemblyNameContains)),
-               new MessageSource<IResponse>(factory.CreateMessageReceiver<IResponse>(), _deserializerFactory.Create<IResponse, TServiceMessage>(_assemblyNameContains)),
-               new MessagePublisher<IRequest>(factory.CreateMessageSender<IRequest>(), _serializer, new DefaultPropertyProvider<IRequest>()),
-               new MessagePublisher<ICommand>(factory.CreateMessageSender<ICommand>(), _serializer, new DefaultPropertyProvider<ICommand>()),
+               new MessageSource<IEvent>(_messageClientEntityFactory.CreateMessageReceiver<IEvent>(), _deserializerFactory.Create<IEvent, TServiceMessage>(_assemblyNameContains)),
+               new MessageSource<IResponse>(_messageClientEntityFactory.CreateMessageReceiver<IResponse>(), _deserializerFactory.Create<IResponse, TServiceMessage>(_assemblyNameContains)),
+               new MessagePublisher<IRequest>(_messageClientEntityFactory.CreateMessageSender<IRequest>(), _serializer, new DefaultPropertyProvider<IRequest>()),
+               new MessagePublisher<ICommand>(_messageClientEntityFactory.CreateMessageSender<ICommand>(), _serializer, new DefaultPropertyProvider<ICommand>()),
                typeof(TServiceMessage));
         }
     }    

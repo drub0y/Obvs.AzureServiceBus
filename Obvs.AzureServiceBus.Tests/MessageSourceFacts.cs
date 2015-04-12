@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.ServiceBus.Messaging;
 using Moq;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.MessageProperties;
 using Obvs.Serialization;
 using Obvs.Types;
@@ -23,7 +24,7 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessageSource<TestMessage>((MessageReceiver)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
+                    new MessageSource<TestMessage>((IMessageReceiver)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
                 };
 
                 action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "messageReceiver");
@@ -127,7 +128,7 @@ namespace Obvs.AzureServiceBus.Tests
                     o.OnCompleted();
 
                     return Disposable.Empty;
-                });
+                        });
 
                 MessageSource<TestMessage> messageSource = new MessageSource<TestMessage>(brokeredMessages, new[] { mockTestMessageDeserializer.Object });
 
@@ -175,10 +176,10 @@ namespace Obvs.AzureServiceBus.Tests
 
                     o.OnNext(brokeredMessageThatShouldBeReceived);
 
-                    o.OnCompleted();
+                        o.OnCompleted();
 
-                    return Disposable.Empty;
-                });
+                        return Disposable.Empty;
+                    });
 
                 MessageSource<TestMessage> messageSource = new MessageSource<TestMessage>(brokeredMessages, new[] { mockTestMessageDeserializer.Object });
 

@@ -30,10 +30,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HackedBrain.Azure.ServiceBus, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\HackedBrain.Azure.ServiceBus.0.1.1-beta\lib\net45\HackedBrain.Azure.ServiceBus.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.ServiceBus, Version=2.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\WindowsAzure.ServiceBus.2.6.4\lib\net40-full\Microsoft.ServiceBus.dll</HintPath>
@@ -73,6 +69,14 @@
     <Compile Include="Configuration\AzureServiceBusQueueEndpointProvider.cs" />
     <Compile Include="Configuration\AzureServiceBusQueueFluentConfig.cs" />
     <Compile Include="Configuration\MessageClientEntityFactory.cs" />
+    <Compile Include="Configuration\ConfigurationExceptions.cs" />
+    <Compile Include="Configuration\Unconfigured.cs" />
+    <Compile Include="Infrastructure\IMessageReceiver.cs" />
+    <Compile Include="Infrastructure\MessageReceiverWrapper.cs" />
+    <Compile Include="Infrastructure\MessagingFactoryWrapper.cs" />
+    <Compile Include="Infrastructure\IMessagingFactory.cs" />
+    <Compile Include="Infrastructure\NamespaceManagerWrapper.cs" />
+    <Compile Include="Infrastructure\INamespaceManager.cs" />
     <Compile Include="Infrastructure\IMessageSender.cs" />
     <Compile Include="Infrastructure\MessageSenderWrapper.cs" />
     <Compile Include="MessagePublisher.cs" />

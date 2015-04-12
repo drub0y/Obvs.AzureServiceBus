@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using HackedBrain.WindowsAzure.ServiceBus.Messaging;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.MessageProperties;
 using Obvs.Serialization;
 using Obvs.Types;
@@ -17,23 +19,26 @@ namespace Obvs.AzureServiceBus
     {
         private IObservable<BrokeredMessage> _brokeredMessages;
         private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
-        private bool _shouldAutoCompleteMessages;        
+        private bool _shouldAutoCompleteMessages;
+        private CancellationTokenSource _messageReceiverBrokeredMessageObservableCancellationTokenSource;
 
-        public MessageSource(MessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+        public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
             : this(messageReceiver, deserializers, true)
         {
         }
 
-        public MessageSource(MessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, bool shouldAutoCompleteMessages)
+        public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, bool shouldAutoCompleteMessages)
         {
             if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
             if(shouldAutoCompleteMessages && messageReceiver.Mode != ReceiveMode.PeekLock) throw new ArgumentException("Auto-completion of messages is only supported for ReceiveMode of PeekLock.", "shouldAutoCompleteMessages");
 
-            Initialize(messageReceiver.WhenMessageReceived(), deserializers, shouldAutoCompleteMessages);
+            IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messageReceiver);
+
+            Initialize(brokeredMessages, deserializers, shouldAutoCompleteMessages);
         }
 
         public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
-            : this(brokeredMessages, deserializers, false)
+            : this(brokeredMessages, deserializers, shouldAutoCompleteMessages: false)
         {
         }
 
@@ -73,6 +78,46 @@ namespace Obvs.AzureServiceBus
 
         public void Dispose()
         {
+            if(_messageReceiverBrokeredMessageObservableCancellationTokenSource != null)
+            {
+                _messageReceiverBrokeredMessageObservableCancellationTokenSource.Dispose();
+                _messageReceiverBrokeredMessageObservableCancellationTokenSource = null;
+            }
+        }
+
+        private IObservable<BrokeredMessage> CreateBrokeredMessageObservableFromMessageReceiver(IMessageReceiver messageReceiver)
+        {
+            _messageReceiverBrokeredMessageObservableCancellationTokenSource = new CancellationTokenSource();
+            
+            IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(async (observer, cancellationToken) =>
+            {
+                while(!messageReceiver.IsClosed
+                            &&
+                        !cancellationToken.IsCancellationRequested
+                            &&
+                       !_messageReceiverBrokeredMessageObservableCancellationTokenSource.IsCancellationRequested)
+                {
+                    try
+                    {
+                        BrokeredMessage nextMessage = await messageReceiver.ReceiveAsync();
+
+                        if(nextMessage != null)
+                        {
+                            observer.OnNext(nextMessage);
+                        }
+                    }
+                    catch(Exception exception)
+                    {
+                        observer.OnError(exception);
+                    }
+                }
+
+                observer.OnCompleted();
+
+                return new CancellationDisposable(_messageReceiverBrokeredMessageObservableCancellationTokenSource);
+            });
+
+            return brokeredMessages.Publish().RefCount();
         }
 
         private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, bool shouldAutoCompleteMessages)
