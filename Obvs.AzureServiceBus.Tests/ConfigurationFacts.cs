@@ -74,6 +74,21 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
+        public class RequestResponseCorrelationProviderFacts : ConfigurationFacts
+        {
+            [Fact]
+            public void ConfigureNullRequestResponseCorrelationProviderThrows()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithRequestResponseCorrelationProvider(null);
+
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("provider");
+            }
+        }
+
         public class MessageTypeConfigurationFacts : ConfigurationFacts
         {
             [Fact]

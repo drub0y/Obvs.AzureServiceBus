@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
@@ -22,10 +21,15 @@ namespace Obvs.AzureServiceBus.Configuration
         ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(NamespaceManager namespaceManager);
     }
 
-    public interface ICanSpecifyAzureServiceBusMessagingFactory : ICanSpecifyAzureServiceBusMessagingEntity
+    public interface ICanSpecifyAzureServiceBusMessagingFactory : ICanSpecifyRequestResponseCorrelationProvider
     {
-        ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(IMessagingFactory messagingFactory);
-        ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(MessagingFactory messagingFactory);
+        ICanSpecifyRequestResponseCorrelationProvider WithMessagingFactory(IMessagingFactory messagingFactory);
+        ICanSpecifyRequestResponseCorrelationProvider WithMessagingFactory(MessagingFactory messagingFactory);
+    }
+
+    public interface ICanSpecifyRequestResponseCorrelationProvider : ICanSpecifyAzureServiceBusMessagingEntity
+    {
+        ICanSpecifyAzureServiceBusMessagingEntity WithRequestResponseCorrelationProvider(IRequestResponseCorrelationProvider provider);
     }
 
     public interface ICanSpecifyAzureServiceBusMessagingEntity : ICanSpecifyEndpointSerializers
@@ -45,7 +49,7 @@ namespace Obvs.AzureServiceBus.Configuration
         ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath, string subscriptionName, bool canDeleteIfAlreadyExists) where TMessage : IMessage;
     }
 
-    internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusNamespace, ICanSpecifyAzureServiceBusMessagingFactory, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
+    internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusNamespace, ICanSpecifyAzureServiceBusMessagingFactory, ICanSpecifyRequestResponseCorrelationProvider, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
         where TServiceMessage : IMessage
     {
         private readonly ICanAddEndpoint _canAddEndpoint;
@@ -56,6 +60,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings = new List<MessageTypePathMappingDetails>();
         private IMessagingFactory _messagingFactory;
         private INamespaceManager _namespaceManager;
+        private IRequestResponseCorrelationProvider _requestResponseCorrelationProvider;
 
         public AzureServiceBusQueueFluentConfig(ICanAddEndpoint canAddEndpoint)
         {
@@ -90,7 +95,7 @@ namespace Obvs.AzureServiceBus.Configuration
                 _messagingFactory = new MessagingFactoryWrapper(MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider));
             }
             
-            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains);
+            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains, _requestResponseCorrelationProvider ?? new DefaultRequestResponseCorrelationProvider());
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString)
@@ -116,7 +121,7 @@ namespace Obvs.AzureServiceBus.Configuration
         }
 
 
-        public ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(IMessagingFactory messagingFactory)
+        public ICanSpecifyRequestResponseCorrelationProvider WithMessagingFactory(IMessagingFactory messagingFactory)
         {
             if(messagingFactory == null) throw new ArgumentNullException("messagingFactory");
             
@@ -124,7 +129,7 @@ namespace Obvs.AzureServiceBus.Configuration
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(MessagingFactory messagingFactory)
+        public ICanSpecifyRequestResponseCorrelationProvider WithMessagingFactory(MessagingFactory messagingFactory)
         {
             return WithMessagingFactory(new MessagingFactoryWrapper(messagingFactory));
         }
@@ -211,6 +216,14 @@ namespace Obvs.AzureServiceBus.Configuration
         public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath, string subscriptionName, bool canDeleteIfAlreadyExists) where TMessage : IMessage
         {
             _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, createIfDoesntExist: true, isTemporary: true, canDeleteTemporaryIfAlreadyExists: canDeleteIfAlreadyExists));
+            return this;
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity WithRequestResponseCorrelationProvider(IRequestResponseCorrelationProvider provider)
+        {
+            if(provider == null) throw new ArgumentNullException("provider");
+            
+            _requestResponseCorrelationProvider = provider;
             return this;
         }
     }

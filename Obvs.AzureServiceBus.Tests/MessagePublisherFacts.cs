@@ -23,10 +23,10 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessagePublisher<TestMessage>((MessageSender)null, new Mock<IMessageSerializer>().Object, new Mock<IMessagePropertyProvider<TestMessage>>().Object);
+                    new MessagePublisher<ITestMessage>((MessageSender)null, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), Mock.Of<IRequestResponseCorrelationProvider>());
                 };
 
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "messageSender");
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("messageSender");
             }
 
             [Fact]
@@ -34,10 +34,10 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessagePublisher<TestMessage>((IMessageSender)null, new Mock<IMessageSerializer>().Object, new Mock<IMessagePropertyProvider<TestMessage>>().Object);
+                    new MessagePublisher<ITestMessage>((IMessageSender)null, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), Mock.Of<IRequestResponseCorrelationProvider>());
                 };
 
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "messageSender");
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("messageSender");
             }
 
             [Fact]
@@ -45,10 +45,10 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessagePublisher<TestMessage>(new Mock<IMessageSender>().Object, null, new Mock<IMessagePropertyProvider<TestMessage>>().Object);
+                    new MessagePublisher<ITestMessage>(Mock.Of<IMessageSender>(), null, Mock.Of<IMessagePropertyProvider<ITestMessage>>(), Mock.Of<IRequestResponseCorrelationProvider>());
                 };
 
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "serializer");
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("serializer");
             }
 
             [Fact]
@@ -56,10 +56,21 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessagePublisher<TestMessage>(new Mock<IMessageSender>().Object, new Mock<IMessageSerializer>().Object, null);
+                    new MessagePublisher<ITestMessage>(Mock.Of<IMessageSender>(), Mock.Of<IMessageSerializer>(), null, Mock.Of<IRequestResponseCorrelationProvider>());
                 };
 
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "propertyProvider");
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("propertyProvider");
+            }
+
+            [Fact]
+            public void CreatingWithNullRequestResponseCorrelationProviderThrows()
+            {
+                Action action = () =>
+                {
+                    new MessagePublisher<ITestMessage>(Mock.Of<IMessageSender>(), Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), null);
+                };
+
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("requestCorrelationProvider");
             }
         }
 
@@ -68,13 +79,9 @@ namespace Obvs.AzureServiceBus.Tests
             [Fact]
             public void SerializesMessage()
             {
-                Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
-
                 Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
 
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-                
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<ITestMessage> messagePublisher = new MessagePublisher<ITestMessage>(Mock.Of<IMessageSender>(), mockMessageSerializer.Object, Mock.Of<IMessagePropertyProvider<ITestMessage>>(), Mock.Of<IRequestResponseCorrelationProvider>());
 
                 TestMessage message = new TestMessage();
 
@@ -96,9 +103,7 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
-
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
+                Mock<IMessagePropertyProvider<ITestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<ITestMessage>>();
 
                 KeyValuePair<string, object>[] properties = new[]
                 {
@@ -106,16 +111,16 @@ namespace Obvs.AzureServiceBus.Tests
                     new KeyValuePair<string, object>("Prop2", "two"),
                 };
 
-                mockMessagePropertyProvider.Setup(mpp => mpp.GetProperties(It.IsAny<TestMessage>()))
+                mockMessagePropertyProvider.Setup(mpp => mpp.GetProperties(It.IsAny<ITestMessage>()))
                     .Returns(properties);
 
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<ITestMessage> messagePublisher = new MessagePublisher<ITestMessage>(mockMessageSender.Object, Mock.Of<IMessageSerializer>(), mockMessagePropertyProvider.Object, Mock.Of<IRequestResponseCorrelationProvider>());
 
                 TestMessage message = new TestMessage();
 
                 await messagePublisher.PublishAsync(message);
 
-                mockMessagePropertyProvider.Verify(mpp => mpp.GetProperties(It.Is<TestMessage>(it => Object.ReferenceEquals(it, message))), Times.Once);
+                mockMessagePropertyProvider.Verify(mpp => mpp.GetProperties(It.Is<ITestMessage>(it => Object.ReferenceEquals(it, message))), Times.Once);
 
                 brokeredMessageSent.Should().NotBeNull();
 
@@ -137,11 +142,7 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
-
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<ITestMessage> messagePublisher = new MessagePublisher<ITestMessage>(mockMessageSender.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), Mock.Of<IRequestResponseCorrelationProvider>());
 
                 TestMessage message = new TestMessage();
 
@@ -157,11 +158,7 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
-
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<ITestMessage> messagePublisher = new MessagePublisher<ITestMessage>(mockMessageSender.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), Mock.Of<IRequestResponseCorrelationProvider>());
 
                 TestMessage message = new TestMessage();
 
@@ -172,6 +169,34 @@ namespace Obvs.AzureServiceBus.Tests
         }
 
         public class RequestResponseFacts
+        {
+            [Fact]
+            public async Task SendingRequestInvokesCorrelationProvider()
+            {
+                Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
+
+                BrokeredMessage brokeredMessageSent = null;
+
+                mockMessageSender.Setup(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()))
+                    .Callback<BrokeredMessage>(bm =>
+                    {
+                        brokeredMessageSent = bm;
+                    })
+                    .Returns(Task.FromResult<object>(null));
+
+                Mock<IRequestResponseCorrelationProvider> mockRequestCorrelationProvider = new Mock<IRequestResponseCorrelationProvider>();
+
+                MessagePublisher<ITestMessage> messagePublisher = new MessagePublisher<ITestMessage>(mockMessageSender.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), mockRequestCorrelationProvider.Object);
+
+                TestRequest request = new TestRequest();
+
+                await messagePublisher.PublishAsync(request);
+
+                mockRequestCorrelationProvider.Verify(rcp => rcp.Correlate(request, It.IsAny<BrokeredMessage>()), Times.Once());
+            }
+        }
+
+        public class DefaultRequestCorrelationProviderFacts
         {
             [Fact]
             public async Task RequestWithNoRequestorIdOrRequestIdEndsUpWithNoCorrelationData()
@@ -187,11 +212,7 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
-
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<ITestMessage> messagePublisher = new MessagePublisher<ITestMessage>(mockMessageSender.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), new DefaultRequestResponseCorrelationProvider());
 
                 TestRequest request = new TestRequest();
 
@@ -218,11 +239,7 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
-
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<ITestMessage> messagePublisher = new MessagePublisher<ITestMessage>(mockMessageSender.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), new DefaultRequestResponseCorrelationProvider());
 
                 TestRequest request = new TestRequest
                 {
@@ -251,11 +268,7 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
-
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<ITestMessage> messagePublisher = new MessagePublisher<ITestMessage>(mockMessageSender.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<ITestMessage>>(), new DefaultRequestResponseCorrelationProvider());
 
                 TestRequest request = new TestRequest
                 {
@@ -271,9 +284,12 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
-        public class TestMessage : IMessage
+        public interface ITestMessage : IMessage
         {
+        }
 
+        public class TestMessage : ITestMessage
+        {
         }
 
         public class TestRequest : TestMessage, IRequest

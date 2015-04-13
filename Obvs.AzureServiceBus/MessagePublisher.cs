@@ -16,20 +16,24 @@ namespace Obvs.AzureServiceBus
         private IMessageSender _messageSender;
         private IMessageSerializer _serializer;
         private IMessagePropertyProvider<TMessage> _propertyProvider;
+        private IRequestResponseCorrelationProvider _requestCorrelationProvider;
 
-        public MessagePublisher(MessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider) : this(new MessageSenderWrapper(messageSender), serializer, propertyProvider)
+        public MessagePublisher(MessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider, IRequestResponseCorrelationProvider requestCorrelationProvider)
+            : this(new MessageSenderWrapper(messageSender), serializer, propertyProvider, requestCorrelationProvider)
         {
         }
 
-        internal MessagePublisher(IMessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider)
+        internal MessagePublisher(IMessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider, IRequestResponseCorrelationProvider requestCorrelationProvider)
         {
             if(messageSender == null) throw new ArgumentNullException("messageSender");
             if(serializer == null) throw new ArgumentNullException("serializer");
             if(propertyProvider == null) throw new ArgumentNullException("propertyProvider");
+            if(requestCorrelationProvider == null) throw new ArgumentNullException("requestCorrelationProvider");
             
             _messageSender = messageSender;
             _serializer = serializer;
             _propertyProvider = propertyProvider;
+            _requestCorrelationProvider = requestCorrelationProvider;
         }
 
 
@@ -55,7 +59,7 @@ namespace Obvs.AzureServiceBus
 
                 BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
 
-                SetSessionAndCorrelationIdentifiersIfApplicable(message, brokeredMessage);
+                SetCorrelationIdentifiersIfApplicable(message, brokeredMessage);
             
                 SetProperties(message, properties, brokeredMessage);
 
@@ -73,13 +77,13 @@ namespace Obvs.AzureServiceBus
                 }
         }
 
-        private void SetSessionAndCorrelationIdentifiersIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
+        private void SetCorrelationIdentifiersIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
         {
             IRequest requestMessage = message as IRequest;
 
             if(requestMessage != null)
             {
-                SetRequestSessionAndCorrelationIdentifiers(brokeredMessage, requestMessage);
+                _requestCorrelationProvider.Correlate(requestMessage, brokeredMessage);
             }
             else
             {
@@ -87,34 +91,9 @@ namespace Obvs.AzureServiceBus
 
                 if(responseMessage != null)
                 {
-                    SetResponseSessionAndCorrelationIdentifiers(brokeredMessage, responseMessage);
-                }                
+                    _requestCorrelationProvider.Correlate(responseMessage, brokeredMessage);
+                }
             }
         }
-
-        private static void SetRequestSessionAndCorrelationIdentifiers(BrokeredMessage brokeredMessage, IRequest requestMessage)
-        {
-            string requesterId = requestMessage.RequesterId;
-
-            if(!string.IsNullOrEmpty(requesterId))
-            {
-                brokeredMessage.ReplyToSessionId = requesterId;
-            }
-
-            brokeredMessage.CorrelationId = requestMessage.RequestId;
-        }
-
-        private static void SetResponseSessionAndCorrelationIdentifiers(BrokeredMessage brokeredMessage, IResponse responseMessage)
-        {
-            string requesterId = responseMessage.RequesterId;
-
-            if(!string.IsNullOrEmpty(requesterId))
-            {
-                brokeredMessage.SessionId = requesterId;
-            }
-
-            brokeredMessage.CorrelationId = responseMessage.RequestId;
-        }
-
     }
 }
