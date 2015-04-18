@@ -29,7 +29,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
     public interface ICanSpecifyRequestResponseCorrelationProvider : ICanSpecifyAzureServiceBusMessagingEntity
     {
-        ICanSpecifyAzureServiceBusMessagingEntity WithRequestResponseCorrelationProvider(IRequestResponseCorrelationProvider provider);
+        ICanSpecifyAzureServiceBusMessagingEntity WithRequestResponseCorrelationProvider(IBrokeredMessageRequestResponseCorrelationMapper provider);
     }
 
     public interface ICanSpecifyAzureServiceBusMessagingEntity : ICanSpecifyEndpointSerializers
@@ -60,7 +60,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings = new List<MessageTypePathMappingDetails>();
         private IMessagingFactory _messagingFactory;
         private INamespaceManager _namespaceManager;
-        private IRequestResponseCorrelationProvider _requestResponseCorrelationProvider;
+        private IBrokeredMessageRequestResponseCorrelationMapper _requestResponseCorrelationProvider;
 
         public AzureServiceBusQueueFluentConfig(ICanAddEndpoint canAddEndpoint)
         {
@@ -95,7 +95,7 @@ namespace Obvs.AzureServiceBus.Configuration
                 _messagingFactory = new MessagingFactoryWrapper(MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider));
             }
             
-            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains, _requestResponseCorrelationProvider ?? new DefaultRequestResponseCorrelationProvider());
+            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains, _requestResponseCorrelationProvider ?? new DefaultBrokeredMessageRequestResponseCorrelationMapper());
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString)
@@ -219,7 +219,7 @@ namespace Obvs.AzureServiceBus.Configuration
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity WithRequestResponseCorrelationProvider(IRequestResponseCorrelationProvider provider)
+        public ICanSpecifyAzureServiceBusMessagingEntity WithRequestResponseCorrelationProvider(IBrokeredMessageRequestResponseCorrelationMapper provider)
         {
             if(provider == null) throw new ArgumentNullException("provider");
             

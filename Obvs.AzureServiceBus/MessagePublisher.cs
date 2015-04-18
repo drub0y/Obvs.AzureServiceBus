@@ -16,14 +16,14 @@ namespace Obvs.AzureServiceBus
         private IMessageSender _messageSender;
         private IMessageSerializer _serializer;
         private IMessagePropertyProvider<TMessage> _propertyProvider;
-        private IRequestResponseCorrelationProvider _requestCorrelationProvider;
+        private IBrokeredMessageRequestResponseCorrelationMapper _requestCorrelationProvider;
 
-        public MessagePublisher(MessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider, IRequestResponseCorrelationProvider requestCorrelationProvider)
+        public MessagePublisher(MessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider, IBrokeredMessageRequestResponseCorrelationMapper requestCorrelationProvider)
             : this(new MessageSenderWrapper(messageSender), serializer, propertyProvider, requestCorrelationProvider)
         {
         }
 
-        internal MessagePublisher(IMessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider, IRequestResponseCorrelationProvider requestCorrelationProvider)
+        internal MessagePublisher(IMessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider, IBrokeredMessageRequestResponseCorrelationMapper requestCorrelationProvider)
         {
             if(messageSender == null) throw new ArgumentNullException("messageSender");
             if(serializer == null) throw new ArgumentNullException("serializer");
@@ -83,7 +83,7 @@ namespace Obvs.AzureServiceBus
 
             if(requestMessage != null)
             {
-                _requestCorrelationProvider.Correlate(requestMessage, brokeredMessage);
+                _requestCorrelationProvider.MapFromRequest(requestMessage, brokeredMessage);
             }
             else
             {
@@ -91,7 +91,7 @@ namespace Obvs.AzureServiceBus
 
                 if(responseMessage != null)
                 {
-                    _requestCorrelationProvider.Correlate(responseMessage, brokeredMessage);
+                    _requestCorrelationProvider.MapToResponse(brokeredMessage, responseMessage);
                 }
             }
         }

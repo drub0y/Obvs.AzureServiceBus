@@ -18,9 +18,9 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly IMessageDeserializerFactory _deserializerFactory;
         private readonly string _assemblyNameContains;
         private readonly MessageClientEntityFactory _messageClientEntityFactory;
-        private readonly IRequestResponseCorrelationProvider _requestResponseCorrelationProvider;
+        private readonly IBrokeredMessageRequestResponseCorrelationMapper _requestResponseCorrelationProvider;
 
-        public AzureServiceBusQueueEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, string assemblyNameContains, IRequestResponseCorrelationProvider requestResponseCorrelationProvider)
+        public AzureServiceBusQueueEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, string assemblyNameContains, IBrokeredMessageRequestResponseCorrelationMapper requestResponseCorrelationProvider)
             : base(serviceName)
         {
             _serializer = serializer;

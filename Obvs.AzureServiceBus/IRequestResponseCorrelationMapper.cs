@@ -8,15 +8,15 @@ using Obvs.Types;
 
 namespace Obvs.AzureServiceBus
 {
-    public interface IRequestResponseCorrelationProvider
+    public interface IBrokeredMessageRequestResponseCorrelationMapper
     {
-        void Correlate(IRequest request, BrokeredMessage brokeredMessage);
-        void Correlate(IResponse response, BrokeredMessage brokeredMessage);
+        void MapFromRequest(IRequest request, BrokeredMessage brokeredMessage);
+        void MapToResponse(BrokeredMessage brokeredMessage, IResponse response);
     }
 
-    public sealed class DefaultRequestResponseCorrelationProvider : IRequestResponseCorrelationProvider
+    public sealed class DefaultBrokeredMessageRequestResponseCorrelationMapper : IBrokeredMessageRequestResponseCorrelationMapper
     {
-        public void Correlate(IRequest request, BrokeredMessage brokeredMessage)
+        public void MapFromRequest(IRequest request, BrokeredMessage brokeredMessage)
         {
             string requesterId = request.RequesterId;
 
@@ -28,7 +28,7 @@ namespace Obvs.AzureServiceBus
             brokeredMessage.CorrelationId = request.RequestId;
         }
 
-        public void Correlate(IResponse response, BrokeredMessage brokeredMessage)
+        public void MapToResponse(BrokeredMessage brokeredMessage, IResponse response)
         {
             string requesterId = response.RequesterId;
 
