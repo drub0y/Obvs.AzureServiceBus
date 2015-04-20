@@ -28,7 +28,7 @@ namespace Obvs.AzureServiceBus.Samples
                 .UsingDebugLogging()
                 .Create();
 
-            IDisposable comandsSubscription = serviceBus.Commands.SubscribeOn(TaskPoolScheduler.Default)
+            IDisposable commandsSubscription = serviceBus.Commands.SubscribeOn(TaskPoolScheduler.Default)
                 .OfType<SampleCommand>()
                 .Subscribe(c =>
                 {
@@ -50,7 +50,7 @@ namespace Obvs.AzureServiceBus.Samples
             Console.WriteLine("Shutting down...");
 
             commandSenderSubscription.Dispose();
-            comandsSubscription.Dispose();
+            commandsSubscription.Dispose();
 
             Console.WriteLine("Shut down completed. Hit any key to exit!");
             Console.ReadKey(true);

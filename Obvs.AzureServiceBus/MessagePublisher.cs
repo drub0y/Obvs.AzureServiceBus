@@ -31,7 +31,6 @@ namespace Obvs.AzureServiceBus
             _messageTypeMessageSenderMap = new ConcurrentDictionary<Type, IMessageSender>();
         }
 
-
         public Task PublishAsync(TMessage message)
         {
             IEnumerable<KeyValuePair<string, object>> properties = _propertyProvider.GetProperties(message);
@@ -71,10 +70,10 @@ namespace Obvs.AzureServiceBus
         {
             brokeredMessage.Properties.Add(MessagePropertyNames.TypeName, message.GetType().Name);
 
-                foreach(KeyValuePair<string, object> property in properties)
-                {
-                    brokeredMessage.Properties.Add(property);
-                }
+            foreach(KeyValuePair<string, object> property in properties)
+            {
+                brokeredMessage.Properties.Add(property);
+            }
         }
 
         private void SetSessionAndCorrelationIdentifiersIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
