@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.ServiceBus.Messaging;
+﻿using Microsoft.ServiceBus.Messaging;
 using Obvs.Types;
 
 namespace Obvs.AzureServiceBus
@@ -11,7 +6,7 @@ namespace Obvs.AzureServiceBus
     public interface IBrokeredMessageRequestResponseCorrelationMapper
     {
         void MapFromRequest(IRequest request, BrokeredMessage brokeredMessage);
-        void MapToResponse(BrokeredMessage brokeredMessage, IResponse response);
+        void MapFromResponse(IResponse response, BrokeredMessage brokeredMessage);
     }
 
     public sealed class DefaultBrokeredMessageRequestResponseCorrelationMapper : IBrokeredMessageRequestResponseCorrelationMapper
@@ -28,7 +23,7 @@ namespace Obvs.AzureServiceBus
             brokeredMessage.CorrelationId = request.RequestId;
         }
 
-        public void MapToResponse(BrokeredMessage brokeredMessage, IResponse response)
+        public void MapFromResponse(IResponse response, BrokeredMessage brokeredMessage)
         {
             string requesterId = response.RequesterId;
 

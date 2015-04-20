@@ -68,7 +68,7 @@
     <Compile Include="Configuration\AzureServiceBusConfigExtensions.cs" />
     <Compile Include="Configuration\AzureServiceBusQueueEndpointProvider.cs" />
     <Compile Include="Configuration\AzureServiceBusQueueFluentConfig.cs" />
-    <Compile Include="IRequestResponseCorrelationMapper.cs" />
+    <Compile Include="IBrokeredMessageRequestResponseCorrelationMapper.cs" />
     <Compile Include="Configuration\MessageClientEntityFactory.cs" />
     <Compile Include="Configuration\ConfigurationExceptions.cs" />
     <Compile Include="Configuration\Unconfigured.cs" />

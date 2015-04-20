@@ -71,10 +71,10 @@ namespace Obvs.AzureServiceBus
         {
             brokeredMessage.Properties.Add(MessagePropertyNames.TypeName, message.GetType().Name);
 
-                foreach(KeyValuePair<string, object> property in properties)
-                {
-                    brokeredMessage.Properties.Add(property);
-                }
+            foreach(KeyValuePair<string, object> property in properties)
+            {
+                brokeredMessage.Properties.Add(property);
+            }
         }
 
         private void SetCorrelationIdentifiersIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
@@ -91,7 +91,7 @@ namespace Obvs.AzureServiceBus
 
                 if(responseMessage != null)
                 {
-                    _requestCorrelationProvider.MapToResponse(brokeredMessage, responseMessage);
+                    _requestCorrelationProvider.MapFromResponse(responseMessage, brokeredMessage);
                 }
             }
         }
