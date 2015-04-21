@@ -193,7 +193,68 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
+        public class TransactionalMessageFacts
+        {
+            [Fact]
+            public async Task CompletingTransactionalMessageCompletesTheAssociatedBrokeredMessage()
+            {
+                Mock<IMessageDeserializer<TestTransactionalMessage>> mockTestTransactionalMessageDeserializer = new Mock<IMessageDeserializer<TestTransactionalMessage>>();
+                mockTestTransactionalMessageDeserializer.Setup(md => md.GetTypeName())
+                    .Returns(typeof(TestMessage).Name);
+
+                TestTransactionalMessage testTransactionalMessage = new TestTransactionalMessage();
+
+                mockTestTransactionalMessageDeserializer.Setup(md => md.Deserialize(It.IsAny<Stream>()))
+                    .Returns(testTransactionalMessage);
+
+                BrokeredMessage brokeredMessageThatShouldBeIgnored = new BrokeredMessage()
+                {
+                    Properties =
+                        {
+                            { MessagePropertyNames.TypeName, "SomeMessageTypeThatIDontWant" }
+                        }
+                };
+
+                BrokeredMessage brokeredMessageThatShouldBeReceived = new BrokeredMessage()
+                {
+                    Properties =
+                    {
+                        { MessagePropertyNames.TypeName, typeof(TestMessage).Name }
+                    }
+                };
+
+                IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(o =>
+                {
+                    o.OnNext(brokeredMessageThatShouldBeIgnored);
+
+                    o.OnNext(brokeredMessageThatShouldBeReceived);
+
+                    o.OnCompleted();
+
+                    return Disposable.Empty;
+                });
+
+                MessageSource<TestTransactionalMessage> messageSource = new MessageSource<TestTransactionalMessage>(brokeredMessages, new[] { mockTestTransactionalMessageDeserializer.Object });
+
+                TestTransactionalMessage message = await messageSource.Messages.SingleOrDefaultAsync();
+
+                message.Should().NotBeNull();
+                message.BrokeredMessage.Should().BeSameAs(brokeredMessageThatShouldBeReceived);
+
+                await message.CompleteAsync();
+            }
+        }
+
         public class TestMessage : IMessage
+        {
+            public int TestId
+            {
+                get;
+                set;
+            }
+        }
+
+        public class TestTransactionalMessage : TransactionalMessage
         {
             public int TestId
             {
