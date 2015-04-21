@@ -1,12 +1,14 @@
 ﻿<?xml version="1.0"?>
-<package >
+<package>
     <metadata>
         <id>$id$</id>
         <version>$version$</version>
         <title>$title$</title>
-        <authors>$author$</authors>
-        <description>Azure ServiceBus transport support for Obvs</description>
+        <authors>Drew Marsh (@drub0y)</authors>
+        <projectUrl>https://github.com/drub0y/Obvs.AzureServiceBus/</projectUrl>
+        <licenseUrl>https://github.com/drub0y/Obvs.AzureServiceBus/blob/master/LICENSE.md</licenseUrl>
+        <description>Microsoft Azure ServiceBus transport support for the Obvs framework.</description>
         <copyright>Copyright 2015</copyright>
-        <releaseNotes></releaseNotes>
+        <releaseNotes>Initial release.</releaseNotes>
     </metadata>
 </package>
