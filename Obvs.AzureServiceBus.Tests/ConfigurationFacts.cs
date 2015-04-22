@@ -250,6 +250,23 @@ namespace Obvs.AzureServiceBus.Tests
                 _mockNamespaceManager.Verify(nsm => nsm.DeleteQueue("commands"), Times.Once);
                 _mockNamespaceManager.Verify(nsm => nsm.CreateQueue("commands"), Times.Once);
             }
+
+            [Fact]
+            public void UseTemporarySubscriptionForTopicThatDoesntExistAlsoCreatesTopic()
+            {
+                ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingTemporarySubscriptionFor<IEvent>("events", "test-subscription", canDeleteIfAlreadyExists: true)
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClient()
+                    .CreateClient();
+
+                _mockNamespaceManager.Verify(nsm => nsm.CreateTopic("events"), Times.Once);
+                _mockNamespaceManager.Verify(nsm => nsm.CreateSubscription("events", "test-subscription"), Times.Once);
+            }
         }
 
         public interface ITestMessage : IMessage

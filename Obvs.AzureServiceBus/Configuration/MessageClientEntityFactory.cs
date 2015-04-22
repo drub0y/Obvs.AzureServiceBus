@@ -89,16 +89,18 @@ namespace Obvs.AzureServiceBus.Configuration
             }
         }
 
-        public sealed class PathComparer : IEqualityComparer<MessageTypePathMappingDetails>
+        public sealed class MessagingEntityTypeAndPathComparer : IEqualityComparer<MessageTypePathMappingDetails>
         {
             public bool Equals(MessageTypePathMappingDetails x, MessageTypePathMappingDetails y)
             {
-                return StringComparer.OrdinalIgnoreCase.Equals(x, y);
+                return x.MessagingEntityType == y.MessagingEntityType
+                            &&
+                       StringComparer.OrdinalIgnoreCase.Equals(x, y);
             }
 
             public int GetHashCode(MessageTypePathMappingDetails obj)
             {
-                return obj.Path.GetHashCode();
+                return obj.MessagingEntityType.GetHashCode() ^ obj.Path.GetHashCode();
             }
         }
     }
@@ -108,7 +110,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly INamespaceManager _namespaceManager;
         private readonly IMessagingFactory _messagingFactory;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings;
-        private readonly HashSet<MessageTypePathMappingDetails> _verifiedExistingMessagingEntities = new HashSet<MessageTypePathMappingDetails>(new MessageTypePathMappingDetails.PathComparer());
+        private readonly HashSet<MessageTypePathMappingDetails> _verifiedExistingMessagingEntities = new HashSet<MessageTypePathMappingDetails>(new MessageTypePathMappingDetails.MessagingEntityTypeAndPathComparer());
 
         public MessageClientEntityFactory(INamespaceManager namespaceManager, IMessagingFactory messagingFactory, List<MessageTypePathMappingDetails> messageTypePathMappings)
         {
@@ -198,7 +200,19 @@ namespace Obvs.AzureServiceBus.Configuration
                         string subscriptionName = parts[2];
 
                         exists = () => _namespaceManager.SubscriptionExists(topicPath, subscriptionName);
-                        create = () => _namespaceManager.CreateSubscription(topicPath, subscriptionName);
+                        create = () =>
+                            {
+                                MessageTypePathMappingDetails topicMessageTypePathMapping = _messageTypePathMappings.FirstOrDefault(mtpmd => mtpmd.MessagingEntityType == MessagingEntityType.Topic && mtpmd.Path == topicPath);
+
+                                if(topicMessageTypePathMapping == null)
+                                {
+                                    topicMessageTypePathMapping = new MessageTypePathMappingDetails(mappingDetails.MessageType, topicPath, MessagingEntityType.Topic, mappingDetails.CreateIfDoesntExist);
+                                }
+
+                                EnsureMessagingEntityExists(topicMessageTypePathMapping);
+
+                                _namespaceManager.CreateSubscription(topicPath, subscriptionName);
+                            };
                         delete = () => _namespaceManager.DeleteSubscription(topicPath, subscriptionName);
 
                         break;
