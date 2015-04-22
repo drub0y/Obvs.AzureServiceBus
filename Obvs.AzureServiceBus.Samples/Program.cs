@@ -11,7 +11,7 @@ namespace Obvs.AzureServiceBus.Samples
     class Program
     {
         private const string MessagingEntityNameFormat = "obvs-azuresb-samples--{0}";
-        
+
         static void Main(string[] args)
         {
             IServiceBus serviceBus = ServiceBus.Configure()
@@ -21,7 +21,8 @@ namespace Obvs.AzureServiceBus.Samples
                 .UsingTemporaryQueueFor<ICommand>(BuildMessagingEntityName("commands"), canDeleteIfAlreadyExists: true)
                 //.UsingTemporaryQueueFor<IRequest>(BuildMessagingEntityName("requests"))
                 //.UsingTemporaryQueueFor<IResponse>(BuildMessagingEntityName("responses"))
-                //.UsingTemporaryQueueFor<IEvent>(BuildMessagingEntityName("events"))
+                .UsingTemporaryTopicFor<IEvent>(BuildMessagingEntityName("events"), canDeleteIfAlreadyExists: true)
+                .UsingTemporarySubscriptionFor<IEvent>(BuildMessagingEntityName("events"), "sample-subscription1", canDeleteIfAlreadyExists: true)
                 .SerializedWith(new JsonMessageSerializer(), new JsonMessageDeserializerFactory())
                 .FilterMessageTypeAssemblies("Obvs.AzureServiceBus.Samples")
                 .AsClientAndServer()
@@ -32,25 +33,95 @@ namespace Obvs.AzureServiceBus.Samples
                 .OfType<SampleCommand>()
                 .Subscribe(c =>
                 {
-                    Console.WriteLine("Got command: {0}", c.CommandId);   
+                    Console.WriteLine("Got command: {0}", c.CommandId);
+
+                    serviceBus.PublishAsync(new SampleEvent
+                        {
+                            EventId = "EVENT:" + c.CommandId,
+                        });
                 });
 
-            IDisposable commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(250)).SubscribeOn(TaskPoolScheduler.Default)
-                .Subscribe(l =>
-                    {
-                        Console.WriteLine("Sending command...");
-                        serviceBus.SendAsync(new SampleCommand
-                            {
-                                CommandId = Guid.NewGuid().ToString("D")
-                            });
-                    });
+            IDisposable commandSenderSubscription = null;
+            IDisposable eventsSubscription = null;
 
-            Console.WriteLine("Hit any key to stop...");
+            Console.WriteLine("'X' - stop...");
+            Console.WriteLine("'C' - start/stop sending of commands");
+            Console.WriteLine("'E' - attach/detach event listener");
+
+            bool shouldStop = false;
+
+            do
+            {
+                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+
+                switch(keyInfo.Key)
+                {
+                    case ConsoleKey.C:
+                        if(commandSenderSubscription == null)
+                        {
+                            commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(250)).SubscribeOn(TaskPoolScheduler.Default)
+                                .Subscribe(l =>
+                                {
+                                    Console.WriteLine("Sending command...");
+                                    serviceBus.SendAsync(new SampleCommand
+                                        {
+                                            CommandId = Guid.NewGuid().ToString("D")
+                                        });
+                                });
+                        }
+                        else
+                        {
+                            commandSenderSubscription.Dispose();
+                            commandSenderSubscription = null;
+                        }
+
+                        break;
+
+                    case ConsoleKey.E:
+                        if(eventsSubscription == null)
+                        {
+                            Console.WriteLine("Starting event listener...");
+
+                            eventsSubscription = serviceBus.Events.SubscribeOn(TaskPoolScheduler.Default)
+                                                                    .OfType<SampleEvent>()
+                                                                    .Subscribe(e =>
+                                                                    {
+                                                                        Console.WriteLine("Got event: {0}", e.EventId);
+                                                                    });
+                        }
+                        else
+                        {
+                            Console.WriteLine("Stopping event listener!");
+
+                            eventsSubscription.Dispose();
+                            eventsSubscription = null;
+                        }
+
+                        break;
+
+                    case ConsoleKey.X:
+                        shouldStop = true;
+
+                        break;
+                }
+            } while(!shouldStop);
+
+
             Console.ReadKey(true);
             Console.WriteLine("Shutting down...");
 
             commandSenderSubscription.Dispose();
+            ((IDisposable)serviceBus).Dispose();
+
+            Console.WriteLine("ServiceBus disposed, should have stopped receiving messages? Hit any key to finish cleaning up subscriptions...");
+            Console.ReadKey(true);
+
             commandsSubscription.Dispose();
+
+            if(eventsSubscription != null)
+            {
+                eventsSubscription.Dispose();
+            }
 
             Console.WriteLine("Shut down completed. Hit any key to exit!");
             Console.ReadKey(true);

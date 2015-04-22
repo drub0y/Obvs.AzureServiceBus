@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Obvs.Types;
+﻿using Obvs.Types;
 
 namespace Obvs.AzureServiceBus.Samples
 {
@@ -21,6 +17,11 @@ namespace Obvs.AzureServiceBus.Samples
 
     public class SampleEvent : ISampleMessage, IEvent
     {
+        public string EventId
+        {
+            get;
+            set;
+        }
     }
 
     public class SampleRequest : ISampleMessage, IRequest
