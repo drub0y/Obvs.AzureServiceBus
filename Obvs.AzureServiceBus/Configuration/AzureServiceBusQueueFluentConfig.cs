@@ -31,18 +31,11 @@ namespace Obvs.AzureServiceBus.Configuration
     public interface ICanSpecifyAzureServiceBusMessagingEntity : ICanSpecifyEndpointSerializers
     {
         ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, bool createIfDoesntExist) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage;        
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, bool createIfDoesntExist) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
         ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, bool createIfDoesntExist) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryQueueFor<TMessage>(string queuePath) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryQueueFor<TMessage>(string queuePath, bool canDeleteIfAlreadyExists) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryTopicFor<TMessage>(string topicPath) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryTopicFor<TMessage>(string topicPath, bool canDeleteIfAlreadyExists) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath, string subscriptionName, bool canDeleteIfAlreadyExists) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
     }
 
     internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusNamespace, ICanSpecifyAzureServiceBusMessagingFactory, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
@@ -144,73 +137,34 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage
         {
-            return UsingQueueFor<TMessage>(queuePath, createIfDoesntExist: false);
+            return UsingQueueFor<TMessage>(queuePath, MessagingEntityCreationOptions.None);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, bool createIfDoesntExist) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue, createIfDoesntExist: createIfDoesntExist));
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue, creationOptions));
             return this;
         }
 
         public ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage
         {
-            return UsingTopicFor<TMessage>(topicPath, createIfDoesntExist: false);
+            return UsingTopicFor<TMessage>(topicPath, MessagingEntityCreationOptions.None);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, bool createIfDoesntExist) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Topic, createIfDoesntExist: createIfDoesntExist));
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Topic, creationOptions));
             return this;
         }
 
         public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage
         {
-            return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, createIfDoesntExist: false);
+            return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, MessagingEntityCreationOptions.None);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, bool createIfDoesntExist) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, createIfDoesntExist: createIfDoesntExist));
-            return this;
-        }
-
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryQueueFor<TMessage>(string queuePath) where TMessage : IMessage
-        {
-            return UsingTemporaryQueueFor<TMessage>(queuePath, canDeleteIfAlreadyExists: false);
-        }
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryQueueFor<TMessage>(string queuePath, bool canDeleteIfAlreadyExists) where TMessage : IMessage
-        {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue, createIfDoesntExist: true, isTemporary: true, canDeleteTemporaryIfAlreadyExists: canDeleteIfAlreadyExists));
-            return this;
-        }
-
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryTopicFor<TMessage>(string topicPath) where TMessage : IMessage
-        {
-            return UsingTemporaryTopicFor<TMessage>(topicPath, canDeleteIfAlreadyExists: false);
-        }
-
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporaryTopicFor<TMessage>(string topicPath, bool canDeleteIfAlreadyExists) where TMessage : IMessage
-        {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Topic, createIfDoesntExist: true, isTemporary: true, canDeleteTemporaryIfAlreadyExists: canDeleteIfAlreadyExists));
-            return this;
-        }
-
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath) where TMessage : IMessage
-        {
-            string temporarySubscriptionName = Guid.NewGuid().ToString("D");
-            
-            return UsingTemporarySubscriptionFor<TMessage>(topicPath, temporarySubscriptionName, canDeleteIfAlreadyExists: true);
-        }
-
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage
-        {
-            return UsingTemporarySubscriptionFor<TMessage>(topicPath, subscriptionName, canDeleteIfAlreadyExists: false);
-        }
-
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTemporarySubscriptionFor<TMessage>(string topicPath, string subscriptionName, bool canDeleteIfAlreadyExists) where TMessage : IMessage
-        {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, createIfDoesntExist: true, isTemporary: true, canDeleteTemporaryIfAlreadyExists: canDeleteIfAlreadyExists));
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions));
             return this;
         }
     }

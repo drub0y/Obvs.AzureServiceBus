@@ -12,33 +12,38 @@ namespace Obvs.AzureServiceBus.Configuration
         Subscription = 2
     }
 
+    [Flags]
+    public enum MessagingEntityCreationOptions
+    {
+        None = 0,
+        CreateIfDoesntExist = 1,
+        CreateAsTemporary = 2,
+        RecreateExistingTemporary = 4
+    }
+
     public class MessageTypePathMappingDetails
     {
         private readonly Type _messageType;
         private readonly string _path;
         private readonly MessagingEntityType _messagingEntityType;
-        private readonly bool _isTemporary;
-        private readonly bool _createIfDoesntExist;
-        private readonly bool _canDeleteTemporaryIfAlreadyExists;
+        private readonly MessagingEntityCreationOptions _creationOptions;
 
         public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType)
-            : this(messageType, path, messagingEntityType, createIfDoesntExist: false)
+            : this(messageType, path, messagingEntityType, MessagingEntityCreationOptions.None)
         {
         }
 
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, bool createIfDoesntExist)
-            : this(messageType, path, messagingEntityType, createIfDoesntExist, isTemporary: false, canDeleteTemporaryIfAlreadyExists: false)
+        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions)
+            : this(messageType, path, messagingEntityType, creationOptions, isTemporary: false)
         {
         }
 
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, bool createIfDoesntExist, bool isTemporary, bool canDeleteTemporaryIfAlreadyExists)
+        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions, bool isTemporary)
         {
             _messageType = messageType;
             _path = path;
             _messagingEntityType = messagingEntityType;
-            _createIfDoesntExist = createIfDoesntExist;
-            _isTemporary = isTemporary;
-            _canDeleteTemporaryIfAlreadyExists = canDeleteTemporaryIfAlreadyExists;
+            _creationOptions = creationOptions;
         }
 
         public Type MessageType
@@ -65,27 +70,11 @@ namespace Obvs.AzureServiceBus.Configuration
             }
         }
 
-        public bool CreateIfDoesntExist
+        public MessagingEntityCreationOptions CreationOptions
         {
             get
             {
-                return _createIfDoesntExist;
-            }
-        }
-
-        public bool IsTemporary
-        {
-            get
-            {
-                return _isTemporary;
-            }
-        }
-
-        public bool CanDeleteTemporaryIfAlreadyExists
-        {
-            get
-            {
-                return _canDeleteTemporaryIfAlreadyExists;
+                return _creationOptions;
             }
         }
 
@@ -206,7 +195,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
                                 if(topicMessageTypePathMapping == null)
                                 {
-                                    topicMessageTypePathMapping = new MessageTypePathMappingDetails(mappingDetails.MessageType, topicPath, MessagingEntityType.Topic, mappingDetails.CreateIfDoesntExist);
+                                    topicMessageTypePathMapping = new MessageTypePathMappingDetails(mappingDetails.MessageType, topicPath, MessagingEntityType.Topic, MessagingEntityCreationOptions.None);
                                 }
 
                                 EnsureMessagingEntityExists(topicMessageTypePathMapping);
@@ -221,11 +210,13 @@ namespace Obvs.AzureServiceBus.Configuration
                         throw new NotSupportedException(string.Format("Unsupported messaging entity type, {0}, requested for creation (path {1}).", mappingDetails.MessagingEntityType, mappingDetails.Path));
                 }
 
-                if(exists())
+                bool alreadyExists = exists();
+
+                if(alreadyExists)
                 {
-                    if(mappingDetails.IsTemporary)
+                    if((mappingDetails.CreationOptions & MessagingEntityCreationOptions.CreateAsTemporary) != 0)
                     {
-                        if(!mappingDetails.CanDeleteTemporaryIfAlreadyExists)
+                        if((mappingDetails.CreationOptions & MessagingEntityCreationOptions.RecreateExistingTemporary) == 0)
                         {
                             throw new MessagingEntityAlreadyExistsException(mappingDetails.Path, mappingDetails.MessagingEntityType);
                         }
@@ -233,14 +224,19 @@ namespace Obvs.AzureServiceBus.Configuration
                         try
                         {
                             delete();
+
+                            alreadyExists = false;
                         }
                         catch(UnauthorizedAccessException exception)
                         {
                             throw new UnauthorizedAccessException(string.Format("Unable to delete temporary messaging that already exists at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
                         }
-                    };
-                }
-                else if(!mappingDetails.CreateIfDoesntExist)
+                    }
+                }                
+                
+                if(!alreadyExists
+                        &&
+                   (mappingDetails.CreationOptions & MessagingEntityCreationOptions.CreateIfDoesntExist) == 0)
                 {
                     throw new MessagingEntityDoesNotAlreadyExistException(mappingDetails.Path, mappingDetails.MessagingEntityType);
                 }
