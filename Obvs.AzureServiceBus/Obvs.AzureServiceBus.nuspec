@@ -9,6 +9,6 @@
         <licenseUrl>https://github.com/drub0y/Obvs.AzureServiceBus/blob/master/LICENSE.md</licenseUrl>
         <description>Microsoft Azure ServiceBus transport support for the Obvs framework.</description>
         <copyright>Copyright 2015</copyright>
-        <releaseNotes>Initial release.</releaseNotes>
+        <releaseNotes>Bug fixes - https://github.com/drub0y/Obvs.AzureServiceBus/commit/545bd662a020c73ab92689c18fe271ce047f192c</releaseNotes>
     </metadata>
 </package>
