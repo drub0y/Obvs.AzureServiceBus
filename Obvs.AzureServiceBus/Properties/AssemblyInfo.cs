@@ -14,8 +14,8 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-[assembly: AssemblyVersion("0.1.0.*")]
-[assembly: AssemblyInformationalVersion("0.1.0-alpha")]
+[assembly: AssemblyVersion("0.2.1.*")]
+[assembly: AssemblyInformationalVersion("0.2.1-alpha")]
 
 [assembly: InternalsVisibleTo("Obvs.AzureServiceBus.Tests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
