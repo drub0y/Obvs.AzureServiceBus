@@ -232,23 +232,24 @@ namespace Obvs.AzureServiceBus.Configuration
                             throw new UnauthorizedAccessException(string.Format("Unable to delete temporary messaging that already exists at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
                         }
                     }
-                }                
-                
-                if(!alreadyExists
-                        &&
-                   (mappingDetails.CreationOptions & MessagingEntityCreationOptions.CreateIfDoesntExist) == 0)
-                {
-                    throw new MessagingEntityDoesNotAlreadyExistException(mappingDetails.Path, mappingDetails.MessagingEntityType);
                 }
 
-                try
-                {
-                    create();
-                }
-                catch(UnauthorizedAccessException exception)
-                {
-                    throw new UnauthorizedAccessException(string.Format("Unable to create messaging entity at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
-                }
+				if(!alreadyExists)
+				{
+					if((mappingDetails.CreationOptions & MessagingEntityCreationOptions.CreateIfDoesntExist) == 0)
+					{
+						throw new MessagingEntityDoesNotAlreadyExistException(mappingDetails.Path, mappingDetails.MessagingEntityType);
+					}
+
+					try
+					{
+						create();
+					}
+					catch (UnauthorizedAccessException exception)
+					{
+						throw new UnauthorizedAccessException(string.Format("Unable to create messaging entity at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
+					}
+				}
 
                 _verifiedExistingMessagingEntities.Add(mappingDetails);
             }
