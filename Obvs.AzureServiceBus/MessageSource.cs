@@ -111,10 +111,8 @@ namespace Obvs.AzureServiceBus
                         observer.OnError(exception);
                     }
                 }
-
-                observer.OnCompleted();
-
-                return new CancellationDisposable(_messageReceiverBrokeredMessageObservableCancellationTokenSource);
+                
+                return Disposable.Empty;
             });
 
             return brokeredMessages.Publish().RefCount();

@@ -36,7 +36,7 @@ namespace Obvs.AzureServiceBus.Configuration
     public class MessagingEntityDoesNotAlreadyExistException : Exception
     {
         public MessagingEntityDoesNotAlreadyExistException(string path, MessagingEntityType messagingEntityType)
-            : base(string.Format("A messaging entity with a path of \"{0}\" of type {1} does not exist and was not configured to auto-create.", path, messagingEntityType))
+            : base(string.Format("A messaging entity with a path of \"{0}\" of type {1} does not exist and was not configured to be created automatically.", path, messagingEntityType))
         {
             this.Path = path;
             this.MessagingEntityType = messagingEntityType;
