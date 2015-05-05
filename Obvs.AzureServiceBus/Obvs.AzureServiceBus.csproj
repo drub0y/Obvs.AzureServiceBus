@@ -68,6 +68,7 @@
     <Compile Include="Configuration\AzureServiceBusConfigExtensions.cs" />
     <Compile Include="Configuration\AzureServiceBusQueueEndpointProvider.cs" />
     <Compile Include="Configuration\AzureServiceBusQueueFluentConfig.cs" />
+    <Compile Include="DynamicClassCreationTest.cs" />
     <Compile Include="Infrastructure\PeekLockMessageControl.cs" />
     <Compile Include="PeekLockMessage.cs" />
     <Compile Include="Configuration\MessageClientEntityFactory.cs" />
