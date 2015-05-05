@@ -124,6 +124,7 @@ namespace Obvs.AzureServiceBus
         {
             if(brokeredMessages == null) throw new ArgumentNullException("brokeredMessages");
             if(deserializers == null) throw new ArgumentNullException("deserializers");
+            if(peekLockControlProvider == null) throw new ArgumentNullException("peekLockControlProvider");
 
             _brokeredMessages = brokeredMessages;
             _deserializers = deserializers.ToDictionary(d => d.GetTypeName());

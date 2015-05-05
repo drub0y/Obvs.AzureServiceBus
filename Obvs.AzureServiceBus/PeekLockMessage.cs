@@ -35,4 +35,22 @@ namespace Obvs.AzureServiceBus
             }
         }
     }
+
+    public static class PeekLockControlMessageExtensions
+    {
+        public static IMessagePeekLockControl GetPeekLockControl(this IMessage message)
+        {
+            if(message == null)
+                throw new ArgumentNullException("message");
+
+            PeekLockMessage peekLockMessage = message as PeekLockMessage;
+
+            if(peekLockMessage == null)
+            {
+                throw new InvalidOperationException("The message is not valid for peek lock control.");
+            }
+
+            return peekLockMessage.PeekLockControl;
+        }
+    }
 }

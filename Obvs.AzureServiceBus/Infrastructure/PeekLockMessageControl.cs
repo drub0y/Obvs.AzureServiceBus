@@ -1,7 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
-using Obvs.Types;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
@@ -63,23 +61,6 @@ namespace Obvs.AzureServiceBus.Infrastructure
         public Task RenewLockAsync()
         {
             return _brokeredMessage.RenewLockAsync();
-        }
-    }
-
-    public static class PeekLockControlMessageExtensions
-    {
-        public static IMessagePeekLockControl GetPeekLockControl(this IMessage message)
-        {
-            if(message == null) throw new ArgumentNullException("message");
-
-            PeekLockMessage peekLockMessage = message as PeekLockMessage;
-
-            if(peekLockMessage == null)
-            {
-                throw new InvalidOperationException("The message is not valid for peek lock control.");
-            }
-
-            return peekLockMessage.PeekLockControl;
         }
     }
 }
