@@ -1,24 +1,28 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.Types;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
-    internal interface IMessagePeekLockControlProvider
+    public static class PeekLockControlMessageExtensions
     {
-        IMessagePeekLockControl ProvidePeekLockControl(BrokeredMessage brokeredMessage);
-    }
-
-    internal class MessagePeekLockControlProvider : IMessagePeekLockControlProvider
-    {
-        public static readonly MessagePeekLockControlProvider Default = new MessagePeekLockControlProvider();
-
-        public IMessagePeekLockControl ProvidePeekLockControl(BrokeredMessage brokeredMessage)
+        public static IMessagePeekLockControl PeekLockControl(this IMessage message)
         {
-            return new BrokeredMessagePeekLockControlWrapper(brokeredMessage);
+            if(message == null) throw new ArgumentNullException("message");
+
+            IBrokeredMessageBasedMessage brokeredMessageBasedMessage = message as IBrokeredMessageBasedMessage;
+
+            if(brokeredMessageBasedMessage == null)
+            {
+                throw new InvalidOperationException("The message was not received with peek-lock semantics. Please check your messaging entity configuration to ensure you are using a peek-lock receive mode.");
+            }
+
+            return new BrokeredMessagePeekLockControl(brokeredMessageBasedMessage.BrokeredMessage);
         }
     }
 
-    internal interface IMessagePeekLockControl
+    public interface IMessagePeekLockControl
     {
         Task AbandonAsync();
         Task CompleteAsync();
@@ -26,11 +30,11 @@ namespace Obvs.AzureServiceBus.Infrastructure
         Task RenewLockAsync();
     }
 
-    internal sealed class BrokeredMessagePeekLockControlWrapper : IMessagePeekLockControl
+    internal struct BrokeredMessagePeekLockControl : IMessagePeekLockControl
     {
         private readonly BrokeredMessage _brokeredMessage;
 
-        public BrokeredMessagePeekLockControlWrapper(BrokeredMessage brokeredMessage)
+        public BrokeredMessagePeekLockControl(BrokeredMessage brokeredMessage)
         {
             _brokeredMessage = brokeredMessage;
         }

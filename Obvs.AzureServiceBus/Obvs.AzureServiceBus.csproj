@@ -69,8 +69,8 @@
     <Compile Include="Configuration\AzureServiceBusQueueEndpointProvider.cs" />
     <Compile Include="Configuration\AzureServiceBusQueueFluentConfig.cs" />
     <Compile Include="DynamicClassCreationTest.cs" />
+    <Compile Include="Infrastructure\BrokeredMessageWrapperProvider.cs" />
     <Compile Include="Infrastructure\PeekLockMessageControl.cs" />
-    <Compile Include="PeekLockMessage.cs" />
     <Compile Include="Configuration\MessageClientEntityFactory.cs" />
     <Compile Include="Configuration\ConfigurationExceptions.cs" />
     <Compile Include="Configuration\Unconfigured.cs" />

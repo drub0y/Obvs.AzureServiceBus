@@ -20,30 +20,19 @@ namespace Obvs.AzureServiceBus
         private IObservable<BrokeredMessage> _brokeredMessages;
         private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
         private CancellationTokenSource _messageReceiverBrokeredMessageObservableCancellationTokenSource;
-        private IMessagePeekLockControlProvider _peekLockControlProvider;
 
-        public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
-            : this(messageReceiver, deserializers, MessagePeekLockControlProvider.Default)
-        {            
-        }
-
-        public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
-            : this(brokeredMessages, deserializers, MessagePeekLockControlProvider.Default)
-        {            
-        }
-
-        internal MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
+        internal MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
         {
             if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
 
             IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messageReceiver);
 
-            Initialize(brokeredMessages, deserializers, peekLockControlProvider);
+            Initialize(brokeredMessages, deserializers);
         }
 
-        internal MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
+        internal MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
         {
-            Initialize(brokeredMessages, deserializers, peekLockControlProvider);
+            Initialize(brokeredMessages, deserializers);
         }
 
         public IObservable<TMessage> Messages
@@ -62,11 +51,11 @@ namespace Obvs.AzureServiceBus
                             .Subscribe(
                                 messageParts =>
                                 {
-                                    PeekLockMessage transactionalMessage = messageParts.DeserializedMessage as PeekLockMessage;
+                                    IBrokeredMessageBasedMessage brokeredMessageBasedMessage = messageParts.DeserializedMessage as IBrokeredMessageBasedMessage;
 
-                                    if(transactionalMessage != null)
+                                    if(brokeredMessageBasedMessage != null)
                                     {
-                                        transactionalMessage.BrokeredMessagePeekLockControl = _peekLockControlProvider.ProvidePeekLockControl(messageParts.BrokeredMessage);
+                                        brokeredMessageBasedMessage.BrokeredMessage = messageParts.BrokeredMessage;
                                     }
                                     
                                     o.OnNext(messageParts.DeserializedMessage);
@@ -120,14 +109,13 @@ namespace Obvs.AzureServiceBus
             return brokeredMessages.Publish().RefCount();
         }
 
-        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
+        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
         {
             if(brokeredMessages == null) throw new ArgumentNullException("brokeredMessages");
             if(deserializers == null) throw new ArgumentNullException("deserializers");
 
             _brokeredMessages = brokeredMessages;
             _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
-            _peekLockControlProvider = peekLockControlProvider;
         }
 
         private bool IsCorrectMessageType(BrokeredMessage brokeredMessage)
