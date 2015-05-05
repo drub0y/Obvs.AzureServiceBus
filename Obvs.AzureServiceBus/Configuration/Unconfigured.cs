@@ -28,7 +28,7 @@ namespace Obvs.AzureServiceBus.Configuration
         {
             get
             {
-                return ReceiveMode.PeekLock;
+                return ReceiveMode.ReceiveAndDelete;
             }
         }
 

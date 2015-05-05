@@ -20,9 +20,9 @@ namespace Obvs.AzureServiceBus.Infrastructure
             return new MessageSenderWrapper(_messagingFactory.CreateMessageSender(entityPath));
         }
 
-        public IMessageReceiver CreateMessageReceiver(string entityPath)
+        public IMessageReceiver CreateMessageReceiver(string entityPath, ReceiveMode receiveMode)
         {
-            return new MessageReceiverWrapper(_messagingFactory.CreateMessageReceiver(entityPath));
+            return new MessageReceiverWrapper(_messagingFactory.CreateMessageReceiver(entityPath, receiveMode));
         }
     }
 }

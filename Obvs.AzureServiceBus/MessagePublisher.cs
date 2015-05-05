@@ -17,7 +17,8 @@ namespace Obvs.AzureServiceBus
         private IMessageSerializer _serializer;
         private IMessagePropertyProvider<TMessage> _propertyProvider;
 
-        public MessagePublisher(MessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider) : this(new MessageSenderWrapper(messageSender), serializer, propertyProvider)
+        public MessagePublisher(MessageSender messageSender, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider) 
+            : this(new MessageSenderWrapper(messageSender), serializer, propertyProvider)
         {
         }
 

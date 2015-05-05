@@ -20,19 +20,30 @@ namespace Obvs.AzureServiceBus
         private IObservable<BrokeredMessage> _brokeredMessages;
         private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
         private CancellationTokenSource _messageReceiverBrokeredMessageObservableCancellationTokenSource;
+        private IMessagePeekLockControlProvider _peekLockControlProvider;
 
-        public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+        public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
+            : this(messageReceiver, deserializers, MessagePeekLockControlProvider.Default)
+        {            
+        }
+
+        public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
+            : this(brokeredMessages, deserializers, MessagePeekLockControlProvider.Default)
+        {            
+        }
+
+        internal MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
         {
             if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
 
             IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messageReceiver);
 
-            Initialize(brokeredMessages, deserializers);
+            Initialize(brokeredMessages, deserializers, peekLockControlProvider);
         }
 
-        public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+        internal MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
         {
-            Initialize(brokeredMessages, deserializers);
+            Initialize(brokeredMessages, deserializers, peekLockControlProvider);
         }
 
         public IObservable<TMessage> Messages
@@ -51,11 +62,11 @@ namespace Obvs.AzureServiceBus
                             .Subscribe(
                                 messageParts =>
                                 {
-                                    TransactionalMessage transactionalMessage = messageParts.DeserializedMessage as TransactionalMessage;
+                                    PeekLockMessage transactionalMessage = messageParts.DeserializedMessage as PeekLockMessage;
 
                                     if(transactionalMessage != null)
                                     {
-                                        transactionalMessage.BrokeredMessage = messageParts.BrokeredMessage;
+                                        transactionalMessage.BrokeredMessagePeekLockControl = _peekLockControlProvider.ProvidePeekLockControl(messageParts.BrokeredMessage);
                                     }
                                     
                                     o.OnNext(messageParts.DeserializedMessage);
@@ -102,20 +113,21 @@ namespace Obvs.AzureServiceBus
                         observer.OnError(exception);
                     }
                 }
-                
+
                 return Disposable.Empty;
             });
 
             return brokeredMessages.Publish().RefCount();
         }
 
-        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
+        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
         {
             if(brokeredMessages == null) throw new ArgumentNullException("brokeredMessages");
             if(deserializers == null) throw new ArgumentNullException("deserializers");
 
             _brokeredMessages = brokeredMessages;
             _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
+            _peekLockControlProvider = peekLockControlProvider;
         }
 
         private bool IsCorrectMessageType(BrokeredMessage brokeredMessage)

@@ -234,14 +234,26 @@ namespace Obvs.AzureServiceBus.Tests
                     return Disposable.Empty;
                 });
 
-                MessageSource<TestTransactionalMessage> messageSource = new MessageSource<TestTransactionalMessage>(brokeredMessages, new[] { mockTestTransactionalMessageDeserializer.Object });
+                Mock<IMessagePeekLockControl> brokeredMessagePeekLockControlForMessageThatShouldBeIgnored = new Mock<IMessagePeekLockControl>();
+                Mock<IMessagePeekLockControl> brokeredMessagePeekLockControlForMessageThatShouldBeReceived = new Mock<IMessagePeekLockControl>();
+
+                Mock<IMessagePeekLockControlProvider> mockPeekLockControlProvider = new Mock<IMessagePeekLockControlProvider>();
+                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(brokeredMessageThatShouldBeIgnored))
+                    .Returns(brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Object);
+
+                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(brokeredMessageThatShouldBeReceived))
+                    .Returns(brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Object);
+
+                MessageSource<TestTransactionalMessage> messageSource = new MessageSource<TestTransactionalMessage>(brokeredMessages, new[] { mockTestTransactionalMessageDeserializer.Object }, mockPeekLockControlProvider.Object);
 
                 TestTransactionalMessage message = await messageSource.Messages.SingleOrDefaultAsync();
 
-                message.Should().NotBeNull();
-                message.BrokeredMessage.Should().BeSameAs(brokeredMessageThatShouldBeReceived);
+                message.BrokeredMessagePeekLockControl.Should().NotBeNull();
 
                 await message.CompleteAsync();
+
+                brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Verify(bmplc => bmplc.CompleteAsync(), Times.Never);
+                brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Verify(bmplc => bmplc.CompleteAsync(), Times.Once);
             }
         }
 
@@ -254,7 +266,7 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
-        public class TestTransactionalMessage : TransactionalMessage
+        public class TestTransactionalMessage : PeekLockMessage
         {
             public int TestId
             {

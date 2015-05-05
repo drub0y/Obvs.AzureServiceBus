@@ -3,22 +3,23 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.Types;
 
 namespace Obvs.AzureServiceBus
 {
-    public abstract class TransactionalMessage : ITransactionalMessage
+    public abstract class PeekLockMessage : IPeekLockMessage
     {
         [NonSerialized]
-        private BrokeredMessage _brokeredMessage;
+        private IMessagePeekLockControl _brokeredMessagePeekLockControl;
 
         [XmlIgnore]
         [IgnoreDataMember]
-        internal BrokeredMessage BrokeredMessage
+        internal IMessagePeekLockControl BrokeredMessagePeekLockControl
         {
             get
             {
-                return _brokeredMessage;
+                return _brokeredMessagePeekLockControl;
             }
 
             set
@@ -32,31 +33,32 @@ namespace Obvs.AzureServiceBus
 
 #endif
                 
-                _brokeredMessage = value;
+                _brokeredMessagePeekLockControl = value;
             }
         }
+
         public Task AbandonAsync()
         {
-            return _brokeredMessage.AbandonAsync();
+            return _brokeredMessagePeekLockControl.AbandonAsync();
         }
 
         public Task CompleteAsync()
         {
-            return _brokeredMessage.CompleteAsync();
+            return _brokeredMessagePeekLockControl.CompleteAsync();
         }
 
         public Task RejectAsync(string reasonCode, string description)
         {
-            return _brokeredMessage.DeadLetterAsync(reasonCode, description);
+            return _brokeredMessagePeekLockControl.DeadLetterAsync(reasonCode, description);
         }
 
         public Task RenewAsync()
         {
-            return _brokeredMessage.RenewLockAsync();
+            return _brokeredMessagePeekLockControl.RenewLockAsync();
         }
     }
 
-    public interface ITransactionalMessage : IMessage
+    public interface IPeekLockMessage : IMessage
     {
         Task AbandonAsync();
         Task CompleteAsync();
@@ -64,22 +66,22 @@ namespace Obvs.AzureServiceBus
         Task RenewAsync();
     }
 
-    public interface ITransactionalCommand : ICommand, ITransactionalMessage
+    public interface IPeekLockCommand : ICommand, IPeekLockMessage
     {
     
     }
 
-    public interface ITransactionalEvent : IEvent, ITransactionalMessage
+    public interface IPeekLockEvent : IEvent, IPeekLockMessage
     {
 
     }
 
-    public interface ITransactionalRequest : IRequest, ITransactionalMessage
+    public interface IPeekLockRequest : IRequest, IPeekLockMessage
     {
 
     }
 
-    public interface ITransactionalResponse : IResponse, ITransactionalMessage
+    public interface IPeekLockResponse : IResponse, IPeekLockMessage
     {
     
     }
