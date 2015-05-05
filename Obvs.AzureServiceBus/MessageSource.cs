@@ -20,19 +20,19 @@ namespace Obvs.AzureServiceBus
         private IObservable<BrokeredMessage> _brokeredMessages;
         private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
         private CancellationTokenSource _messageReceiverBrokeredMessageObservableCancellationTokenSource;
-        private IMessagePeekLockControlProvider _peekLockControlProvider;
+        private IBrokeredMessagePeekLockControlProvider _peekLockControlProvider;
 
         public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
-            : this(messageReceiver, deserializers, MessagePeekLockControlProvider.Default)
+            : this(messageReceiver, deserializers, BrokeredMessagePeekLockControlProvider.Default)
         {            
         }
 
         public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
-            : this(brokeredMessages, deserializers, MessagePeekLockControlProvider.Default)
+            : this(brokeredMessages, deserializers, BrokeredMessagePeekLockControlProvider.Default)
         {            
         }
 
-        internal MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
+        internal MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
         {
             if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
 
@@ -41,7 +41,7 @@ namespace Obvs.AzureServiceBus
             Initialize(brokeredMessages, deserializers, peekLockControlProvider);
         }
 
-        internal MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
+        internal MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
         {
             Initialize(brokeredMessages, deserializers, peekLockControlProvider);
         }
@@ -62,11 +62,11 @@ namespace Obvs.AzureServiceBus
                             .Subscribe(
                                 messageParts =>
                                 {
-                                    PeekLockMessage transactionalMessage = messageParts.DeserializedMessage as PeekLockMessage;
+                                    PeekLockMessage peekLockMessage = messageParts.DeserializedMessage as PeekLockMessage;
 
-                                    if(transactionalMessage != null)
+                                    if(peekLockMessage != null)
                                     {
-                                        transactionalMessage.BrokeredMessagePeekLockControl = _peekLockControlProvider.ProvidePeekLockControl(messageParts.BrokeredMessage);
+                                        peekLockMessage.PeekLockControl = _peekLockControlProvider.ProvidePeekLockControl(messageParts.BrokeredMessage);
                                     }
                                     
                                     o.OnNext(messageParts.DeserializedMessage);
@@ -120,7 +120,7 @@ namespace Obvs.AzureServiceBus
             return brokeredMessages.Publish().RefCount();
         }
 
-        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessagePeekLockControlProvider peekLockControlProvider)
+        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
         {
             if(brokeredMessages == null) throw new ArgumentNullException("brokeredMessages");
             if(deserializers == null) throw new ArgumentNullException("deserializers");

@@ -198,11 +198,11 @@ namespace Obvs.AzureServiceBus.Tests
             [Fact]
             public async Task CompletingTransactionalMessageCompletesTheAssociatedBrokeredMessage()
             {
-                Mock<IMessageDeserializer<TestTransactionalMessage>> mockTestTransactionalMessageDeserializer = new Mock<IMessageDeserializer<TestTransactionalMessage>>();
+                Mock<IMessageDeserializer<TestPeekLockMessage>> mockTestTransactionalMessageDeserializer = new Mock<IMessageDeserializer<TestPeekLockMessage>>();
                 mockTestTransactionalMessageDeserializer.Setup(md => md.GetTypeName())
                     .Returns(typeof(TestMessage).Name);
 
-                TestTransactionalMessage testTransactionalMessage = new TestTransactionalMessage();
+                TestPeekLockMessage testTransactionalMessage = new TestPeekLockMessage();
 
                 mockTestTransactionalMessageDeserializer.Setup(md => md.Deserialize(It.IsAny<Stream>()))
                     .Returns(testTransactionalMessage);
@@ -237,20 +237,22 @@ namespace Obvs.AzureServiceBus.Tests
                 Mock<IMessagePeekLockControl> brokeredMessagePeekLockControlForMessageThatShouldBeIgnored = new Mock<IMessagePeekLockControl>();
                 Mock<IMessagePeekLockControl> brokeredMessagePeekLockControlForMessageThatShouldBeReceived = new Mock<IMessagePeekLockControl>();
 
-                Mock<IMessagePeekLockControlProvider> mockPeekLockControlProvider = new Mock<IMessagePeekLockControlProvider>();
+                Mock<IBrokeredMessagePeekLockControlProvider> mockPeekLockControlProvider = new Mock<IBrokeredMessagePeekLockControlProvider>();
                 mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(brokeredMessageThatShouldBeIgnored))
                     .Returns(brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Object);
 
                 mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(brokeredMessageThatShouldBeReceived))
                     .Returns(brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Object);
 
-                MessageSource<TestTransactionalMessage> messageSource = new MessageSource<TestTransactionalMessage>(brokeredMessages, new[] { mockTestTransactionalMessageDeserializer.Object }, mockPeekLockControlProvider.Object);
+                MessageSource<TestPeekLockMessage> messageSource = new MessageSource<TestPeekLockMessage>(brokeredMessages, new[] { mockTestTransactionalMessageDeserializer.Object }, mockPeekLockControlProvider.Object);
 
-                TestTransactionalMessage message = await messageSource.Messages.SingleOrDefaultAsync();
+                TestPeekLockMessage message = await messageSource.Messages.SingleOrDefaultAsync();
 
-                message.BrokeredMessagePeekLockControl.Should().NotBeNull();
+                IMessagePeekLockControl messagePeekLockControl = message.GetPeekLockControl();
+                    
+                messagePeekLockControl.Should().NotBeNull();
 
-                await message.CompleteAsync();
+                await messagePeekLockControl.CompleteAsync();
 
                 brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Verify(bmplc => bmplc.CompleteAsync(), Times.Never);
                 brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Verify(bmplc => bmplc.CompleteAsync(), Times.Once);
@@ -266,7 +268,7 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
-        public class TestTransactionalMessage : PeekLockMessage
+        public class TestPeekLockMessage : PeekLockMessage
         {
             public int TestId
             {

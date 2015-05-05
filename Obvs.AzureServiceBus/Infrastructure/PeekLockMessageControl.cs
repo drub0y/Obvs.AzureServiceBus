@@ -1,36 +1,38 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.Types;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
-    internal interface IMessagePeekLockControlProvider
+    public interface IMessagePeekLockControl
+    {
+        Task AbandonAsync();
+        Task CompleteAsync();
+        Task RejectAsync(string reasonCode, string description);
+        Task RenewLockAsync();
+    }
+
+    internal interface IBrokeredMessagePeekLockControlProvider
     {
         IMessagePeekLockControl ProvidePeekLockControl(BrokeredMessage brokeredMessage);
     }
 
-    internal class MessagePeekLockControlProvider : IMessagePeekLockControlProvider
+    internal class BrokeredMessagePeekLockControlProvider : IBrokeredMessagePeekLockControlProvider
     {
-        public static readonly MessagePeekLockControlProvider Default = new MessagePeekLockControlProvider();
+        public static readonly BrokeredMessagePeekLockControlProvider Default = new BrokeredMessagePeekLockControlProvider();
 
         public IMessagePeekLockControl ProvidePeekLockControl(BrokeredMessage brokeredMessage)
         {
-            return new BrokeredMessagePeekLockControlWrapper(brokeredMessage);
+            return new BrokeredMessagePeekLockControl(brokeredMessage);
         }
     }
 
-    internal interface IMessagePeekLockControl
-    {
-        Task AbandonAsync();
-        Task CompleteAsync();
-        Task DeadLetterAsync(string reasonCode, string description);
-        Task RenewLockAsync();
-    }
-
-    internal sealed class BrokeredMessagePeekLockControlWrapper : IMessagePeekLockControl
+    internal struct BrokeredMessagePeekLockControl : IMessagePeekLockControl
     {
         private readonly BrokeredMessage _brokeredMessage;
 
-        public BrokeredMessagePeekLockControlWrapper(BrokeredMessage brokeredMessage)
+        public BrokeredMessagePeekLockControl(BrokeredMessage brokeredMessage)
         {
             _brokeredMessage = brokeredMessage;
         }
@@ -53,14 +55,31 @@ namespace Obvs.AzureServiceBus.Infrastructure
             return _brokeredMessage.CompleteAsync();
         }
 
-        public Task DeadLetterAsync(string reasonCode, string description)
+        public Task RejectAsync(string reasonCode, string description)
         {
-            return _brokeredMessage.DeadLetterAsync();
+            return _brokeredMessage.DeadLetterAsync(reasonCode, description);
         }
 
         public Task RenewLockAsync()
         {
             return _brokeredMessage.RenewLockAsync();
+        }
+    }
+
+    public static class PeekLockControlMessageExtensions
+    {
+        public static IMessagePeekLockControl GetPeekLockControl(this IMessage message)
+        {
+            if(message == null) throw new ArgumentNullException("message");
+
+            PeekLockMessage peekLockMessage = message as PeekLockMessage;
+
+            if(peekLockMessage == null)
+            {
+                throw new InvalidOperationException("The message is not valid for peek lock control.");
+            }
+
+            return peekLockMessage.PeekLockControl;
         }
     }
 }
