@@ -15,14 +15,14 @@ namespace Obvs.AzureServiceBus.Samples
         static void Main(string[] args)
         {
             IServiceBus serviceBus = ServiceBus.Configure()
-                .WithAzureServiceBusEndpoint<ISampleMessage>()
+                .WithAzureServiceBusEndpoint<SampleMessage>()
                 .Named("Sample Message Bus")
                 .WithConnectionString(Program.GetConnectionString())
-                .UsingTemporaryQueueFor<ICommand>(BuildMessagingEntityName("commands"), canDeleteIfAlreadyExists: true)
+                .UsingQueueFor<ICommand>(BuildMessagingEntityName("commands"), MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                 //.UsingTemporaryQueueFor<IRequest>(BuildMessagingEntityName("requests"))
                 //.UsingTemporaryQueueFor<IResponse>(BuildMessagingEntityName("responses"))
-                .UsingTemporaryTopicFor<IEvent>(BuildMessagingEntityName("events"), canDeleteIfAlreadyExists: true)
-                .UsingTemporarySubscriptionFor<IEvent>(BuildMessagingEntityName("events"), "sample-subscription1", canDeleteIfAlreadyExists: true)
+                .UsingTopicFor<IEvent>(BuildMessagingEntityName("events"), MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
+                .UsingSubscriptionFor<IEvent>(BuildMessagingEntityName("events"), "sample-subscription1", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                 .SerializedWith(new JsonMessageSerializer(), new JsonMessageDeserializerFactory())
                 .FilterMessageTypeAssemblies("Obvs.AzureServiceBus.Samples")
                 .AsClientAndServer()
@@ -110,7 +110,11 @@ namespace Obvs.AzureServiceBus.Samples
             Console.ReadKey(true);
             Console.WriteLine("Shutting down...");
 
-            commandSenderSubscription.Dispose();
+            if(commandSenderSubscription != null)
+            {
+                commandSenderSubscription.Dispose();
+            }
+
             ((IDisposable)serviceBus).Dispose();
 
             Console.WriteLine("ServiceBus disposed, should have stopped receiving messages? Hit any key to finish cleaning up subscriptions...");
@@ -126,7 +130,6 @@ namespace Obvs.AzureServiceBus.Samples
             Console.WriteLine("Shut down completed. Hit any key to exit!");
             Console.ReadKey(true);
         }
-
 
         private static string BuildMessagingEntityName(string entityName)
         {

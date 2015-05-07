@@ -1,12 +1,14 @@
 ﻿using Obvs.Types;
+using Obvs.AzureServiceBus;
 
 namespace Obvs.AzureServiceBus.Samples
 {
-    public interface ISampleMessage : IMessage
+    public class SampleMessage : PeekLockMessage
     {
     }
 
-    public class SampleCommand : ISampleMessage, ICommand
+
+    public class SampleCommand : SampleMessage, ICommand
     {
         public string CommandId
         {
@@ -15,7 +17,7 @@ namespace Obvs.AzureServiceBus.Samples
         }
     }
 
-    public class SampleEvent : ISampleMessage, IEvent
+    public class SampleEvent : SampleMessage, IEvent
     {
         public string EventId
         {
@@ -24,7 +26,7 @@ namespace Obvs.AzureServiceBus.Samples
         }
     }
 
-    public class SampleRequest : ISampleMessage, IRequest
+    public class SampleRequest : SampleMessage, IRequest
     {
         public string RequestId
         {
@@ -39,7 +41,7 @@ namespace Obvs.AzureServiceBus.Samples
         }
     }
 
-    public class SampleResponse : ISampleMessage, IResponse
+    public class SampleResponse : SampleMessage, IResponse
     {
         public string RequestId
         {
