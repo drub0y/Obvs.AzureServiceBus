@@ -24,11 +24,11 @@ namespace Obvs.AzureServiceBus.Configuration
     {
         public static readonly UnconfiguredMessageReceiver<TMessage> Default = new UnconfiguredMessageReceiver<TMessage>();
 
-        public ReceiveMode Mode
+        public MessageReceiveMode Mode
         {
             get
             {
-                return ReceiveMode.ReceiveAndDelete;
+                return MessageReceiveMode.ReceiveAndDelete;
             }
         }
 

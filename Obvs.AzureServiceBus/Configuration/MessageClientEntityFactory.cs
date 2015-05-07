@@ -28,7 +28,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly string _path;
         private readonly MessagingEntityType _messagingEntityType;
         private readonly MessagingEntityCreationOptions _creationOptions;
-        private readonly ReceiveMode _receiveMode;
+        private readonly MessageReceiveMode _receiveMode;
 
         public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType)
             : this(messageType, path, messagingEntityType, MessagingEntityCreationOptions.None)
@@ -36,11 +36,11 @@ namespace Obvs.AzureServiceBus.Configuration
         }
 
         public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions)
-            : this(messageType, path, messagingEntityType, creationOptions, ReceiveMode.ReceiveAndDelete)
+            : this(messageType, path, messagingEntityType, creationOptions, MessageReceiveMode.ReceiveAndDelete)
         {
         }
 
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions, ReceiveMode receiveMode)
+        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions, MessageReceiveMode receiveMode)
         {
             _messageType = messageType;
             _path = path;
@@ -81,7 +81,7 @@ namespace Obvs.AzureServiceBus.Configuration
             }
         }
 
-        public ReceiveMode ReceiveMode
+        public MessageReceiveMode ReceiveMode
         {
             get
             {

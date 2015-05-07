@@ -30,7 +30,7 @@ namespace Obvs.AzureServiceBus.Tests
 
             _mockMessagingFactory = new Mock<IMessagingFactory>();
 
-            _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(It.IsAny<string>(), It.IsAny<ReceiveMode>()))
+            _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(It.IsAny<string>(), It.IsAny<MessageReceiveMode>()))
                 .Returns(new Mock<IMessageReceiver>().Object);
             _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
                 .Returns(new Mock<IMessageSender>().Object);
@@ -198,19 +198,19 @@ namespace Obvs.AzureServiceBus.Tests
                 _mockNamespaceManager.Verify(nsm => nsm.SubscriptionExists("events", "my-event-subscription"), Times.Once());
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("commands"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("commands", ReceiveMode.ReceiveAndDelete), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("commands", MessageReceiveMode.PeekLock), Times.Once());
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("requests"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("requests", ReceiveMode.ReceiveAndDelete), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("requests", MessageReceiveMode.PeekLock), Times.Once());
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("responses"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("responses", ReceiveMode.ReceiveAndDelete), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("responses", MessageReceiveMode.PeekLock), Times.Once());
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("events"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events", ReceiveMode.ReceiveAndDelete), Times.Never);
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events", MessageReceiveMode.PeekLock), Times.Never);
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("events/subscriptions/my-event-subscription"), Times.Never);
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events/subscriptions/my-event-subscription", ReceiveMode.ReceiveAndDelete), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events/subscriptions/my-event-subscription", MessageReceiveMode.PeekLock), Times.Once());
             }
         }
 

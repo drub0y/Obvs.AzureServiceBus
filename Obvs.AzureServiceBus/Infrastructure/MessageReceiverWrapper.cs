@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Configuration;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
@@ -12,11 +13,11 @@ namespace Obvs.AzureServiceBus.Infrastructure
             _messageReceiver = messageReceiver;
         }
 
-        public ReceiveMode Mode
+        public MessageReceiveMode Mode
         {
             get
             {
-                return _messageReceiver.Mode;
+                return MessageReceiveModeTranslator.TranslateAzureServiceBusReceiveModeValueToConfigurationValue(_messageReceiver.Mode);
             }
         }
 
