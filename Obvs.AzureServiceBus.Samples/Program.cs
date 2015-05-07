@@ -3,7 +3,7 @@ using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using Obvs.AzureServiceBus.Configuration;
-using Obvs.Serialization.Json;
+using Obvs.Serialization.Json.Configuration;
 using Obvs.Types;
 
 namespace Obvs.AzureServiceBus.Samples
@@ -19,23 +19,22 @@ namespace Obvs.AzureServiceBus.Samples
                 .Named("Sample Message Bus")
                 .WithConnectionString(Program.GetConnectionString())
                 .UsingQueueFor<ICommand>(BuildMessagingEntityName("commands"), MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
-                //.UsingTemporaryQueueFor<IRequest>(BuildMessagingEntityName("requests"))
-                //.UsingTemporaryQueueFor<IResponse>(BuildMessagingEntityName("responses"))
                 .UsingTopicFor<IEvent>(BuildMessagingEntityName("events"), MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                 .UsingSubscriptionFor<IEvent>(BuildMessagingEntityName("events"), "sample-subscription1", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
-                .SerializedWith(new JsonMessageSerializer(), new JsonMessageDeserializerFactory())
+                .SerializedAsJson()
                 .FilterMessageTypeAssemblies("Obvs.AzureServiceBus.Samples")
                 .AsClientAndServer()
-                .UsingDebugLogging()
+                .UsingDebugLogging(e => true)
                 .Create();
 
-            IDisposable commandsSubscription = serviceBus.Commands.SubscribeOn(TaskPoolScheduler.Default)
+            IDisposable commandsSubscription = serviceBus.Commands
+                .SubscribeOn(TaskPoolScheduler.Default)
                 .OfType<SampleCommand>()
-                .Subscribe(c =>
+                .Subscribe(async c =>
                 {
                     Console.WriteLine("Got command: {0}", c.CommandId);
 
-                    serviceBus.PublishAsync(new SampleEvent
+                    await serviceBus.PublishAsync(new SampleEvent
                         {
                             EventId = "EVENT:" + c.CommandId,
                         });
@@ -59,11 +58,13 @@ namespace Obvs.AzureServiceBus.Samples
                     case ConsoleKey.C:
                         if(commandSenderSubscription == null)
                         {
-                            commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(250)).SubscribeOn(TaskPoolScheduler.Default)
-                                .Subscribe(l =>
+                            commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(250))
+                                .SubscribeOn(TaskPoolScheduler.Default)
+                                .Subscribe(async l =>
                                 {
                                     Console.WriteLine("Sending command...");
-                                    serviceBus.SendAsync(new SampleCommand
+                                    
+                                    await serviceBus.SendAsync(new SampleCommand
                                         {
                                             CommandId = Guid.NewGuid().ToString("D")
                                         });
@@ -82,12 +83,13 @@ namespace Obvs.AzureServiceBus.Samples
                         {
                             Console.WriteLine("Starting event listener...");
 
-                            eventsSubscription = serviceBus.Events.SubscribeOn(TaskPoolScheduler.Default)
-                                                                    .OfType<SampleEvent>()
-                                                                    .Subscribe(e =>
-                                                                    {
-                                                                        Console.WriteLine("Got event: {0}", e.EventId);
-                                                                    });
+                            eventsSubscription = serviceBus.Events
+                                .SubscribeOn(TaskPoolScheduler.Default)
+                                .OfType<SampleEvent>()
+                                .Subscribe(e =>
+                                {
+                                    Console.WriteLine("Got event: {0}", e.EventId);
+                                });
                         }
                         else
                         {
