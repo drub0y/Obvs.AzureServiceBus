@@ -7,8 +7,8 @@
         <authors>Drew Marsh (@drub0y)</authors>
         <projectUrl>https://github.com/drub0y/Obvs.AzureServiceBus/</projectUrl>
         <licenseUrl>https://github.com/drub0y/Obvs.AzureServiceBus/blob/master/LICENSE.md</licenseUrl>
-        <description>Microsoft Azure ServiceBus transport support for the Obvs framework.</description>
+        <description>Microsoft Azure Service Bus transport support for the Obvs Framework.</description>
         <copyright>Copyright 2015</copyright>
-        <releaseNotes>Bug fixes - https://github.com/drub0y/Obvs.AzureServiceBus/commit/545bd662a020c73ab92689c18fe271ce047f192c</releaseNotes>
+        <releaseNotes>Added overloads for the Using[Queue|Subscription]For configuration APIs that make it possible to specify the ReceiveMode now.</releaseNotes>
     </metadata>
 </package>

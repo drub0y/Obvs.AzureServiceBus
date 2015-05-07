@@ -31,11 +31,15 @@ namespace Obvs.AzureServiceBus.Configuration
     public interface ICanSpecifyAzureServiceBusMessagingEntity : ICanSpecifyEndpointSerializers
     {
         ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, ReceiveMode receiveMode) where TMessage : IMessage;
         ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, ReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
         ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage;
         ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage;        
+        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, ReceiveMode receiveMode) where TMessage : IMessage;
         ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, ReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
     }
 
     internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusNamespace, ICanSpecifyAzureServiceBusMessagingFactory, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
@@ -137,12 +141,22 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage
         {
-            return UsingQueueFor<TMessage>(queuePath, MessagingEntityCreationOptions.None);
+            return UsingQueueFor<TMessage>(queuePath, ReceiveMode.ReceiveAndDelete);
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, ReceiveMode receiveMode) where TMessage : IMessage
+        {
+            return UsingQueueFor<TMessage>(queuePath, receiveMode, MessagingEntityCreationOptions.None);
         }
 
         public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue, creationOptions));
+            return UsingQueueFor<TMessage>(queuePath, ReceiveMode.ReceiveAndDelete, creationOptions);
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, ReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
+        {
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue, creationOptions, receiveMode));
             return this;
         }
 
@@ -162,9 +176,19 @@ namespace Obvs.AzureServiceBus.Configuration
             return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, MessagingEntityCreationOptions.None);
         }
 
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, ReceiveMode receiveMode) where TMessage : IMessage
+        {
+            return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, receiveMode, MessagingEntityCreationOptions.None);
+        }
+
         public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions));
+            return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, ReceiveMode.ReceiveAndDelete, creationOptions);
+        }
+
+        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, ReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
+        {
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions, receiveMode));
             return this;
         }
     }
