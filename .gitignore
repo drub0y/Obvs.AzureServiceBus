@@ -230,3 +230,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 /packages
+
+# Obvs.AzureServiceBus project specific ignores
+/IntegrationTestsConfig.json
