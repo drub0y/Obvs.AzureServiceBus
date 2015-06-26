@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Moq;
 using Obvs.AzureServiceBus.Configuration;
 using Obvs.AzureServiceBus.Infrastructure;
+using Obvs.Configuration;
 using Obvs.Serialization;
 using Obvs.Types;
 using Xunit;
@@ -45,7 +50,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureAzureServiceBusEndpointWithNullConnectionStringThrows()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithConnectionString(null);
 
@@ -56,7 +61,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureAzureServiceBusEndpointWithNullINamespaceManagerThrows()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager((INamespaceManager)null);
 
@@ -67,7 +72,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureAzureServiceBusEndpointWithNullNamespaceManagerThrows()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager((NamespaceManager)null);
 
@@ -81,7 +86,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureNoMessageTypesShouldThrow()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -97,7 +102,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureSameMessageTypeForSameRoleMoreThanOnceShouldThrow()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -117,7 +122,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureCommandMessageTypeOnlyShouldBeAbleToSendReceiveCommands()
             {
                 IServiceBus serviceBus = ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -135,7 +140,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void SendingACommandWhenNotConfiguredAsAMessageTypeShouldThrow()
             {
                 IServiceBus serviceBus = ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -155,7 +160,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void PublishingAnEventWhenNotConfiguredAsAMessageTypeShouldThrow()
             {
                 IServiceBus serviceBus = ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -175,7 +180,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureAllMessageTypes()
             {
                 IServiceBus serviceBus = ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                         .Named("Test Service Bus")
                         .WithNamespaceManager(_mockNamespaceManager.Object)
                         .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -223,7 +228,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(false);
 
                 Action action = () => ServiceBus.Configure()
-                 .WithAzureServiceBusEndpoint<ITestMessage>()
+                 .WithAzureServiceBusEndpoint<TestMessage>()
                  .Named("Test Service Bus")
                  .WithNamespaceManager(_mockNamespaceManager.Object)
                  .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -245,7 +250,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(true);
 
                 ServiceBus.Configure()
-                 .WithAzureServiceBusEndpoint<ITestMessage>()
+                 .WithAzureServiceBusEndpoint<TestMessage>()
                  .Named("Test Service Bus")
                  .WithNamespaceManager(_mockNamespaceManager.Object)
                  .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -265,7 +270,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void UseTemporaryMessagingEntityThatAlreadyExistsWithoutSpecifyingCanDeleteIfAlreadyExistsShouldThrow()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -284,7 +289,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void UseTemporaryMessagingEntityThatAlreadyExiststSpecifyingRecreateOptionShouldRecreate()
             {
                 ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -307,7 +312,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(false);
 
                 ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -330,7 +335,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(false);
 
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -355,7 +360,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(false);
 
                 ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -379,7 +384,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(true);
 
                 ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -393,21 +398,101 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
-        public interface ITestMessage : IMessage
+        public class PropertyProviderConfigurationFacts : ConfigurationFacts
+        {
+            private class NotATestMessage : IMessage
+            {
+
+            }
+
+            [Fact]
+            public void ConfiguringANullProviderInstanceThrows()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<TestCommand>(null)
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer();
+
+                action.ShouldThrow<ArgumentNullException>();
+            }
+
+            [Fact]
+            public void ConfiguringAProviderForAMessageThatIsNotDerivedFromTheBaseMessageTypeThrows()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<NotATestMessage>(c => null)
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer();
+
+                action.ShouldThrow<ArgumentException>()
+                    .And.ParamName.Should().Be("provider");
+            }
+
+            [Fact]
+            public async Task EnsureProvidedPropertiesArePresent()
+            {
+                BrokeredMessage brokeredMessage = null;
+                
+                Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
+                mockMessageSender.Setup(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()))
+                    .Callback<BrokeredMessage>(bm => brokeredMessage = bm)
+                    .Returns(Task.FromResult(true));
+
+                _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
+                    .Returns(mockMessageSender.Object);
+
+                IServiceBus serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProvidersFor<TestCommand>(
+                            c => new KeyValuePair<string, object>("SomeProp", "SomeValue"),
+                            c => new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"))
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer()
+                    .Create();
+
+                await serviceBus.SendAsync(new TestCommand());
+
+                brokeredMessage.Should().NotBeNull();
+
+                brokeredMessage.Properties.Should()
+                    .Contain(new KeyValuePair<string, object>("SomeProp", "SomeValue"))
+                    .And.Contain(new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"));
+            }
+        }
+
+        public class TestMessage : IMessage
         {
         }
 
-        public class TestEvent : ITestMessage, IEvent
+        public class TestEvent : TestMessage, IEvent
         {
 
         }
 
-        public class TestCommand : ITestMessage, ICommand
+        public class TestCommand : TestMessage, ICommand
         {
-
+            public string CommandId
+            {
+                get;
+                set;
+            }
         }
 
-        public class TestRequest : ITestMessage, IRequest
+        public class TestRequest : TestMessage, IRequest
         {
             public string RequestId
             {
@@ -422,7 +507,7 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
-        public class TestResponse : ITestMessage, IResponse
+        public class TestResponse : TestMessage, IResponse
         {
             public string RequestId
             {

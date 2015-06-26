@@ -5,6 +5,7 @@ using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.Configuration;
+using Obvs.MessageProperties;
 using Obvs.Serialization;
 using Obvs.Types;
 
@@ -34,7 +35,7 @@ namespace Obvs.AzureServiceBus.Configuration
         ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(MessagingFactory messagingFactory);
     }
 
-    public interface ICanSpecifyAzureServiceBusMessagingEntity : ICanSpecifyEndpointSerializers
+    public interface ICanSpecifyAzureServiceBusMessagingEntity : ICanSpecifyPropertyProviders
     {
         ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage;
         ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessageReceiveMode receiveMode) where TMessage : IMessage;
@@ -48,17 +49,18 @@ namespace Obvs.AzureServiceBus.Configuration
         ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
     }
 
-    internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusNamespace, ICanSpecifyAzureServiceBusMessagingFactory, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
+    internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusNamespace, ICanSpecifyAzureServiceBusMessagingFactory, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers, ICanSpecifyPropertyProviders
         where TServiceMessage : IMessage
     {
         private readonly ICanAddEndpoint _canAddEndpoint;
+        private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings = new List<MessageTypePathMappingDetails>();
         private string _serviceName;
         private IMessageSerializer _serializer;
         private IMessageDeserializerFactory _deserializerFactory;
         private string _assemblyNameContains;
-        private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings = new List<MessageTypePathMappingDetails>();
         private IMessagingFactory _messagingFactory;
         private INamespaceManager _namespaceManager;
+        private Dictionary<Type, List<object>> _propertyProviders = new Dictionary<Type, List<object>>();
 
         public AzureServiceBusQueueFluentConfig(ICanAddEndpoint canAddEndpoint)
         {
@@ -93,7 +95,7 @@ namespace Obvs.AzureServiceBus.Configuration
                 _messagingFactory = new MessagingFactoryWrapper(MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider));
             }
             
-            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains);
+            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains, _propertyProviders);
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString)
@@ -195,6 +197,26 @@ namespace Obvs.AzureServiceBus.Configuration
         public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
         {
             _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions, receiveMode));
+            return this;
+        }
+
+        public ICanSpecifyEndpointSerializers UsingMessagePropertyProviderFor<TMessage>(IMessagePropertyProvider<TMessage> provider) where TMessage : IMessage
+        {
+            if(provider == null) throw new ArgumentNullException("provider");
+
+            if(!typeof(TServiceMessage).IsAssignableFrom(typeof(TMessage))) throw new ArgumentException(string.Format("{0} is not a subclass of {1}.", typeof(TMessage).FullName, typeof(TServiceMessage).FullName), "provider");
+
+            List<object> propertyProvidersForType;
+
+            if(!_propertyProviders.TryGetValue(typeof(TMessage), out propertyProvidersForType))
+            {
+                propertyProvidersForType = new List<object>();
+
+                _propertyProviders.Add(typeof(TMessage), propertyProvidersForType);
+            }
+
+            propertyProvidersForType.Add(provider);
+
             return this;
         }
     }
