@@ -60,7 +60,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private string _assemblyNameContains;
         private IMessagingFactory _messagingFactory;
         private INamespaceManager _namespaceManager;
-        private Dictionary<Type, List<object>> _propertyProviders = new Dictionary<Type, List<object>>();
+        private MessagePropertyProviderManager _messagePropertyProviderManager = new MessagePropertyProviderManager();
 
         public AzureServiceBusQueueFluentConfig(ICanAddEndpoint canAddEndpoint)
         {
@@ -95,7 +95,7 @@ namespace Obvs.AzureServiceBus.Configuration
                 _messagingFactory = new MessagingFactoryWrapper(MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider));
             }
             
-            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains, _propertyProviders);
+            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains, _messagePropertyProviderManager);
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString)
@@ -200,22 +200,13 @@ namespace Obvs.AzureServiceBus.Configuration
             return this;
         }
 
-        public ICanSpecifyEndpointSerializers UsingMessagePropertyProviderFor<TMessage>(IMessagePropertyProvider<TMessage> provider) where TMessage : IMessage
+        public ICanSpecifyEndpointSerializers UsingMessagePropertyProviderFor<TMessage>(IMessagePropertyProvider<TMessage> messagePropertyProvider) where TMessage : IMessage
         {
-            if(provider == null) throw new ArgumentNullException("provider");
+            if(messagePropertyProvider == null) throw new ArgumentNullException("provider");
 
-            if(!typeof(TServiceMessage).IsAssignableFrom(typeof(TMessage))) throw new ArgumentException(string.Format("{0} is not a subclass of {1}.", typeof(TMessage).FullName, typeof(TServiceMessage).FullName), "provider");
+            if(!typeof(TServiceMessage).IsAssignableFrom(typeof(TMessage))) throw new ArgumentException(string.Format("{0} is not a subclass of {1}.", typeof(TMessage).FullName, typeof(TServiceMessage).FullName), "messagePropertyProvider");
 
-            List<object> propertyProvidersForType;
-
-            if(!_propertyProviders.TryGetValue(typeof(TMessage), out propertyProvidersForType))
-            {
-                propertyProvidersForType = new List<object>();
-
-                _propertyProviders.Add(typeof(TMessage), propertyProvidersForType);
-            }
-
-            propertyProvidersForType.Add(provider);
+            _messagePropertyProviderManager.Add(messagePropertyProvider);
 
             return this;
         }

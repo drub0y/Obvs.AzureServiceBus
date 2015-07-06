@@ -435,7 +435,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .AsClientAndServer();
 
                 action.ShouldThrow<ArgumentException>()
-                    .And.ParamName.Should().Be("provider");
+                    .And.ParamName.Should().Be("messagePropertyProvider");
             }
 
             [Fact]
