@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
@@ -16,94 +17,120 @@ namespace Obvs.AzureServiceBus.Configuration
         ReceiveAndDelete
     }
 
-    public interface ICanAddAzureServiceBusServiceName
+    public interface ICanAddAzureServiceBusServiceName<TMessage, TCommand, TEvent, TRequest, TResponse>
+        where TMessage : class
+        where TCommand : class, TMessage
+        where TEvent : class, TMessage
+        where TRequest : class, TMessage
+        where TResponse : class, TMessage
     {
-        ICanSpecifyAzureServiceBusNamespace Named(string serviceName);
+        ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse> Named(string serviceName);
     }
 
-    public interface ICanSpecifyAzureServiceBusNamespace
+    public interface ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse>
+        where TMessage : class
+        where TCommand : class, TMessage
+        where TEvent : class, TMessage
+        where TRequest : class, TMessage
+        where TResponse : class, TMessage
     {
-        ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString);
-        ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(INamespaceManager namespaceManager);
-        ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(NamespaceManager namespaceManager);
+        ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithConnectionString(string connectionString);
+        ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithNamespaceManager(INamespaceManager namespaceManager);
+        ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithNamespaceManager(NamespaceManager namespaceManager);
     }
 
-    public interface ICanSpecifyAzureServiceBusMessagingFactory : ICanSpecifyAzureServiceBusMessagingEntity
+    public interface ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> : ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse>
+        where TMessage : class
+        where TCommand : class, TMessage
+        where TEvent : class, TMessage
+        where TRequest : class, TMessage
+        where TResponse : class, TMessage
     {
-        ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(IMessagingFactory messagingFactory);
-        ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(MessagingFactory messagingFactory);
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> WithMessagingFactory(IMessagingFactory messagingFactory);
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> WithMessagingFactory(MessagingFactory messagingFactory);
     }
 
-    public interface ICanSpecifyAzureServiceBusMessagingEntity : ICanSpecifyEndpointSerializers
+    public interface ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> : ICanSpecifyEndpointSerializers<TMessage, TCommand, TEvent, TRequest, TResponse>
+        where TMessage : class
+        where TCommand : class, TMessage
+        where TEvent : class, TMessage
+        where TRequest : class, TMessage
+        where TResponse : class, TMessage
     {
-        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessageReceiveMode receiveMode) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage;        
-        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
-        ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessagingEntityCreationOptions creationOptions) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingTopicFor<T>(string topicPath) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingTopicFor<T>(string topicPath, MessagingEntityCreationOptions creationOptions) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where T : class, TMessage;
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage;
     }
 
-    internal class AzureServiceBusQueueFluentConfig<TServiceMessage> : ICanAddAzureServiceBusServiceName, ICanSpecifyAzureServiceBusNamespace, ICanSpecifyAzureServiceBusMessagingFactory, ICanSpecifyAzureServiceBusMessagingEntity, ICanCreateEndpointAsClientOrServer, ICanSpecifyEndpointSerializers
-        where TServiceMessage : IMessage
+    internal class AzureServiceBusQueueFluentConfig<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> : ICanAddAzureServiceBusServiceName<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanCreateEndpointAsClientOrServer<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyEndpointSerializers<TMessage, TCommand, TEvent, TRequest, TResponse>
+        where TMessage : class
+        where TCommand : class, TMessage
+        where TEvent : class, TMessage
+        where TRequest : class, TMessage
+        where TResponse : class, TMessage
+        where TServiceMessage : class
     {
-        private readonly ICanAddEndpoint _canAddEndpoint;
+        private readonly ICanAddEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse> _canAddEndpoint;
         private string _serviceName;
         private IMessageSerializer _serializer;
         private IMessageDeserializerFactory _deserializerFactory;
-        private string _assemblyNameContains;
+        private Func<Assembly, bool> _assemblyFilter;
+        private Func<Type, bool> _typeFilter;
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings = new List<MessageTypePathMappingDetails>();
         private IMessagingFactory _messagingFactory;
         private INamespaceManager _namespaceManager;
 
-        public AzureServiceBusQueueFluentConfig(ICanAddEndpoint canAddEndpoint)
+        public AzureServiceBusQueueFluentConfig(ICanAddEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse> canAddEndpoint)
         {
             _canAddEndpoint = canAddEndpoint;
         }
 
-        public ICanSpecifyAzureServiceBusNamespace Named(string serviceName)
+        public ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse> Named(string serviceName)
         {
             _serviceName = serviceName;
             return this;
         }
 
-        public ICanAddEndpointOrLoggingOrCorrelationOrCreate AsClient()
+        public ICanAddEndpointOrLoggingOrCorrelationOrCreate<TMessage, TCommand, TEvent, TRequest, TResponse> AsClient()
         {
             return _canAddEndpoint.WithClientEndpoints(CreateProvider());
         }
 
-        public ICanAddEndpointOrLoggingOrCorrelationOrCreate AsServer()
+        public ICanAddEndpointOrLoggingOrCorrelationOrCreate<TMessage, TCommand, TEvent, TRequest, TResponse> AsServer()
         {
             return _canAddEndpoint.WithServerEndpoints(CreateProvider());
         }
 
-        public ICanAddEndpointOrLoggingOrCorrelationOrCreate AsClientAndServer()
+        public ICanAddEndpointOrLoggingOrCorrelationOrCreate<TMessage, TCommand, TEvent, TRequest, TResponse> AsClientAndServer()
         {
             return _canAddEndpoint.WithEndpoints(CreateProvider());
         }
 
-        private AzureServiceBusQueueEndpointProvider<TServiceMessage> CreateProvider()
+        private AzureServiceBusQueueEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> CreateProvider()
         {
             if(_messagingFactory == null)
             {
                 _messagingFactory = new MessagingFactoryWrapper(MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider));
             }
             
-            return new AzureServiceBusQueueEndpointProvider<TServiceMessage>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyNameContains);
+            return new AzureServiceBusQueueEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyFilter, _typeFilter);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingFactory WithConnectionString(string connectionString)
+        public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithConnectionString(string connectionString)
         {
             if(connectionString == null) throw new ArgumentNullException("connectionString");
             
             return WithNamespaceManager(NamespaceManager.CreateFromConnectionString(connectionString));
         }
 
-        public ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(INamespaceManager namespaceManager)
+        public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithNamespaceManager(INamespaceManager namespaceManager)
         {
             if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
             
@@ -111,7 +138,7 @@ namespace Obvs.AzureServiceBus.Configuration
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingFactory WithNamespaceManager(NamespaceManager namespaceManager)
+        public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithNamespaceManager(NamespaceManager namespaceManager)
         {
             if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
             
@@ -119,7 +146,7 @@ namespace Obvs.AzureServiceBus.Configuration
         }
 
 
-        public ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(IMessagingFactory messagingFactory)
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> WithMessagingFactory(IMessagingFactory messagingFactory)
         {
             if(messagingFactory == null) throw new ArgumentNullException("messagingFactory");
             
@@ -127,74 +154,75 @@ namespace Obvs.AzureServiceBus.Configuration
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity WithMessagingFactory(MessagingFactory messagingFactory)
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> WithMessagingFactory(MessagingFactory messagingFactory)
         {
             return WithMessagingFactory(new MessagingFactoryWrapper(messagingFactory));
         }
 
-        public ICanCreateEndpointAsClientOrServer SerializedWith(IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory)
+        public ICanCreateEndpointAsClientOrServer<TMessage, TCommand, TEvent, TRequest, TResponse> SerializedWith(IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory)
         {
             _serializer = serializer;
             _deserializerFactory = deserializerFactory;
             return this;
         }
 
-        public ICanCreateEndpointAsClientOrServer FilterMessageTypeAssemblies(string assemblyNameContains)
+        public ICanCreateEndpointAsClientOrServer<TMessage, TCommand, TEvent, TRequest, TResponse> FilterMessageTypeAssemblies(Func<Assembly, bool> assemblyFilter = null, Func<Type, bool> typeFilter = null)
         {
-            _assemblyNameContains = assemblyNameContains;
+            _assemblyFilter = assemblyFilter;
+            _typeFilter = typeFilter;
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath) where T : class, TMessage
         {
-            return UsingQueueFor<TMessage>(queuePath, MessageReceiveMode.PeekLock);
+            return UsingQueueFor<T>(queuePath, MessageReceiveMode.PeekLock);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessageReceiveMode receiveMode) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode) where T : class, TMessage
         {
-            return UsingQueueFor<TMessage>(queuePath, receiveMode, MessagingEntityCreationOptions.None);
+            return UsingQueueFor<T>(queuePath, receiveMode, MessagingEntityCreationOptions.None);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            return UsingQueueFor<TMessage>(queuePath, MessageReceiveMode.PeekLock, creationOptions);
+            return UsingQueueFor<T>(queuePath, MessageReceiveMode.PeekLock, creationOptions);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingQueueFor<TMessage>(string queuePath, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), queuePath, MessagingEntityType.Queue, creationOptions, receiveMode));
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(T), queuePath, MessagingEntityType.Queue, creationOptions, receiveMode));
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingTopicFor<T>(string topicPath) where T : class, TMessage
         {
-            return UsingTopicFor<TMessage>(topicPath, MessagingEntityCreationOptions.None);
+            return UsingTopicFor<T>(topicPath, MessagingEntityCreationOptions.None);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingTopicFor<TMessage>(string topicPath, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingTopicFor<T>(string topicPath, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath, MessagingEntityType.Topic, creationOptions));
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(T), topicPath, MessagingEntityType.Topic, creationOptions));
             return this;
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName) where T : class, TMessage
         {
-            return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, MessagingEntityCreationOptions.None);
+            return UsingSubscriptionFor<T>(topicPath, subscriptionName, MessagingEntityCreationOptions.None);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode) where T : class, TMessage
         {
-            return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, receiveMode, MessagingEntityCreationOptions.None);
+            return UsingSubscriptionFor<T>(topicPath, subscriptionName, receiveMode, MessagingEntityCreationOptions.None);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            return UsingSubscriptionFor<TMessage>(topicPath, subscriptionName, MessageReceiveMode.PeekLock, creationOptions);
+            return UsingSubscriptionFor<T>(topicPath, subscriptionName, MessageReceiveMode.PeekLock, creationOptions);
         }
 
-        public ICanSpecifyAzureServiceBusMessagingEntity UsingSubscriptionFor<TMessage>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where TMessage : IMessage
+        public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(TMessage), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions, receiveMode));
+            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(T), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions, receiveMode));
             return this;
         }
     }

@@ -15,7 +15,7 @@ using Obvs.Types;
 namespace Obvs.AzureServiceBus
 {
     public class MessageSource<TMessage> : IMessageSource<TMessage> 
-        where TMessage : IMessage
+        where TMessage : class
     {
         private IObservable<BrokeredMessage> _brokeredMessages;
         private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
