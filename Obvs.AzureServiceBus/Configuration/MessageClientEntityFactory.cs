@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
 
 namespace Obvs.AzureServiceBus.Configuration
@@ -27,6 +28,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly string _path;
         private readonly MessagingEntityType _messagingEntityType;
         private readonly MessagingEntityCreationOptions _creationOptions;
+        private readonly MessageReceiveMode _receiveMode;
 
         public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType)
             : this(messageType, path, messagingEntityType, MessagingEntityCreationOptions.None)
@@ -34,16 +36,17 @@ namespace Obvs.AzureServiceBus.Configuration
         }
 
         public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions)
-            : this(messageType, path, messagingEntityType, creationOptions, isTemporary: false)
+            : this(messageType, path, messagingEntityType, creationOptions, MessageReceiveMode.ReceiveAndDelete)
         {
         }
 
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions, bool isTemporary)
+        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions, MessageReceiveMode receiveMode)
         {
             _messageType = messageType;
             _path = path;
             _messagingEntityType = messagingEntityType;
             _creationOptions = creationOptions;
+            _receiveMode = receiveMode;
         }
 
         public Type MessageType
@@ -75,6 +78,14 @@ namespace Obvs.AzureServiceBus.Configuration
             get
             {
                 return _creationOptions;
+            }
+        }
+
+        public MessageReceiveMode ReceiveMode
+        {
+            get
+            {
+                return _receiveMode;
             }
         }
 
@@ -123,7 +134,7 @@ namespace Obvs.AzureServiceBus.Configuration
             {
                 EnsureMessagingEntityExists(mappingDetails);
                 
-                messageReceiver = _messagingFactory.CreateMessageReceiver(mappingDetails.Path);
+                messageReceiver = _messagingFactory.CreateMessageReceiver(mappingDetails.Path, mappingDetails.ReceiveMode);
             }
             else
             {
@@ -234,22 +245,22 @@ namespace Obvs.AzureServiceBus.Configuration
                     }
                 }
 
-				if(!alreadyExists)
-				{
-					if((mappingDetails.CreationOptions & MessagingEntityCreationOptions.CreateIfDoesntExist) == 0)
-					{
-						throw new MessagingEntityDoesNotAlreadyExistException(mappingDetails.Path, mappingDetails.MessagingEntityType);
-					}
+                if(!alreadyExists)
+                {
+                    if((mappingDetails.CreationOptions & MessagingEntityCreationOptions.CreateIfDoesntExist) == 0)
+                    {
+                        throw new MessagingEntityDoesNotAlreadyExistException(mappingDetails.Path, mappingDetails.MessagingEntityType);
+                    }
 
-					try
-					{
-						create();
-					}
-					catch (UnauthorizedAccessException exception)
-					{
-						throw new UnauthorizedAccessException(string.Format("Unable to create messaging entity at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
-					}
-				}
+                    try
+                    {
+                        create();
+                    }
+                    catch (UnauthorizedAccessException exception)
+                    {
+                        throw new UnauthorizedAccessException(string.Format("Unable to create messaging entity at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
+                    }
+                }
 
                 _verifiedExistingMessagingEntities.Add(mappingDetails);
             }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Configuration;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
@@ -10,6 +10,6 @@ namespace Obvs.AzureServiceBus.Infrastructure
     {
         IMessageSender CreateMessageSender(string entityPath);
 
-        IMessageReceiver CreateMessageReceiver(string entityPath);
+        IMessageReceiver CreateMessageReceiver(string entityPath, MessageReceiveMode receiveMode);
     }
 }

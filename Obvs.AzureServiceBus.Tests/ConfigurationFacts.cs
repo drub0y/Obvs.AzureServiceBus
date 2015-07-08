@@ -29,7 +29,7 @@ namespace Obvs.AzureServiceBus.Tests
 
             _mockMessagingFactory = new Mock<IMessagingFactory>();
 
-            _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(It.IsAny<string>()))
+            _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(It.IsAny<string>(), It.IsAny<MessageReceiveMode>()))
                 .Returns(new Mock<IMessageReceiver>().Object);
             _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
                 .Returns(new Mock<IMessageSender>().Object);
@@ -44,7 +44,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureAzureServiceBusEndpointWithNullConnectionStringThrows()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithConnectionString(null);
 
@@ -55,7 +55,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureAzureServiceBusEndpointWithNullINamespaceManagerThrows()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager((INamespaceManager)null);
 
@@ -66,7 +66,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureAzureServiceBusEndpointWithNullNamespaceManagerThrows()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager((NamespaceManager)null);
 
@@ -80,7 +80,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureNullRequestResponseCorrelationProviderThrows()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithRequestResponseCorrelationProvider(null);
@@ -95,13 +95,13 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureNoMessageTypesShouldThrow()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
-                    .Create();
+                    .CreateServiceBus();
 
                 action.ShouldThrow<ArgumentException>()
                     .And.ParamName.Should().Be("messageTypePathMappings");
@@ -111,7 +111,7 @@ namespace Obvs.AzureServiceBus.Tests
             public void ConfigureSameMessageTypeForSameRoleMoreThanOnceShouldThrow()
             {
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -119,7 +119,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .UsingQueueFor<ICommand>("commandsAgain")
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
-                    .Create();
+                    .CreateServiceBus();
 
                 var exceptionAssertion = action.ShouldThrow<MoreThanOneMappingExistsForMessageTypeException>();
 
@@ -130,15 +130,15 @@ namespace Obvs.AzureServiceBus.Tests
             [Fact]
             public void ConfigureCommandMessageTypeOnlyShouldBeAbleToSendReceiveCommands()
             {
-                IServiceBus serviceBus = ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                IServiceBus<IMessage, ICommand, IEvent, IRequest, IResponse> serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("commands")
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
-                    .Create();
+                    .CreateServiceBus();
 
                 serviceBus.Should().NotBeNull();
 
@@ -148,15 +148,15 @@ namespace Obvs.AzureServiceBus.Tests
             [Fact]
             public void SendingACommandWhenNotConfiguredAsAMessageTypeShouldThrow()
             {
-                IServiceBus serviceBus = ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                IServiceBus<IMessage, ICommand, IEvent, IRequest, IResponse> serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<IEvent>("events")
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
-                    .Create();
+                    .CreateServiceBus();
 
                 serviceBus.Should().NotBeNull();
 
@@ -168,15 +168,15 @@ namespace Obvs.AzureServiceBus.Tests
             [Fact]
             public void PublishingAnEventWhenNotConfiguredAsAMessageTypeShouldThrow()
             {
-                IServiceBus serviceBus = ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                IServiceBus<IMessage, ICommand, IEvent, IRequest, IResponse> serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("commands")
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
-                    .Create();
+                    .CreateServiceBus();
 
                 serviceBus.Should().NotBeNull();
 
@@ -188,8 +188,8 @@ namespace Obvs.AzureServiceBus.Tests
             [Fact]
             public void ConfigureAllMessageTypes()
             {
-                IServiceBus serviceBus = ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                IServiceBus<IMessage, ICommand, IEvent, IRequest, IResponse> serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                         .Named("Test Service Bus")
                         .WithNamespaceManager(_mockNamespaceManager.Object)
                         .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -199,9 +199,9 @@ namespace Obvs.AzureServiceBus.Tests
                         .UsingTopicFor<IEvent>("events")
                         .UsingSubscriptionFor<IEvent>("events", "my-event-subscription")
                         .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
-                        .FilterMessageTypeAssemblies("Obvs.AzureServiceBus.Tests")
+                        .FilterMessageTypeAssemblies(assembly => assembly.GetName().Name == "Obvs.AzureServiceBus.Tests")
                         .AsClientAndServer()
-                    .Create();
+                    .CreateServiceBus();
 
                 serviceBus.Should().NotBeNull();
 
@@ -212,83 +212,83 @@ namespace Obvs.AzureServiceBus.Tests
                 _mockNamespaceManager.Verify(nsm => nsm.SubscriptionExists("events", "my-event-subscription"), Times.Once());
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("commands"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("commands"), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("commands", MessageReceiveMode.PeekLock), Times.Once());
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("requests"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("requests"), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("requests", MessageReceiveMode.PeekLock), Times.Once());
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("responses"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("responses"), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("responses", MessageReceiveMode.PeekLock), Times.Once());
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("events"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events"), Times.Never);
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events", MessageReceiveMode.PeekLock), Times.Never);
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("events/subscriptions/my-event-subscription"), Times.Never);
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events/subscriptions/my-event-subscription"), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events/subscriptions/my-event-subscription", MessageReceiveMode.PeekLock), Times.Once());
             }
         }
 
-		public class ExistingMessagingEntityFacts : ConfigurationFacts
-		{
-			[Fact]
-			public void UseExistingMessagingEntityThatDoesNotExistShouldThrow()
-			{
-				_mockNamespaceManager.Setup(nsm => nsm.QueueExists("commands"))
-					.Returns(false);
+        public class ExistingMessagingEntityFacts : ConfigurationFacts
+        {
+            [Fact]
+            public void UseExistingMessagingEntityThatDoesNotExistShouldThrow()
+            {
+                _mockNamespaceManager.Setup(nsm => nsm.QueueExists("commands"))
+                    .Returns(false);
 
-				Action action = () => ServiceBus.Configure()
-				 .WithAzureServiceBusEndpoint<ITestMessage>()
-				 .Named("Test Service Bus")
-				 .WithNamespaceManager(_mockNamespaceManager.Object)
-				 .WithMessagingFactory(_mockMessagingFactory.Object)
-				 .UsingQueueFor<ICommand>("commands")
-				 .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
-				 .AsClientAndServer()
-				 .Create();
+                Action action = () => ServiceBus.Configure()
+                 .WithAzureServiceBusEndpoint<TestMessage>()
+                 .Named("Test Service Bus")
+                 .WithNamespaceManager(_mockNamespaceManager.Object)
+                 .WithMessagingFactory(_mockMessagingFactory.Object)
+                 .UsingQueueFor<ICommand>("commands")
+                 .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                 .AsClientAndServer()
+                 .CreateServiceBus();
 
-				var exceptionAssertion = action.ShouldThrow<MessagingEntityDoesNotAlreadyExistException>();
+                var exceptionAssertion = action.ShouldThrow<MessagingEntityDoesNotAlreadyExistException>();
 
-				exceptionAssertion.And.Path.Should().Be("commands");
-				exceptionAssertion.And.MessagingEntityType.Should().Be(MessagingEntityType.Queue);
-			}
+                exceptionAssertion.And.Path.Should().Be("commands");
+                exceptionAssertion.And.MessagingEntityType.Should().Be(MessagingEntityType.Queue);
+            }
 
-			[Fact]
-			public void UseExistingMessagingEntityShouldNotTryToCreateTheMessagingEntity()
-			{
-				_mockNamespaceManager.Setup(nsm => nsm.QueueExists("commands"))
-					.Returns(true);
+            [Fact]
+            public void UseExistingMessagingEntityShouldNotTryToCreateTheMessagingEntity()
+            {
+                _mockNamespaceManager.Setup(nsm => nsm.QueueExists("commands"))
+                    .Returns(true);
 
-				ServiceBus.Configure()
-				 .WithAzureServiceBusEndpoint<ITestMessage>()
-				 .Named("Test Service Bus")
-				 .WithNamespaceManager(_mockNamespaceManager.Object)
-				 .WithMessagingFactory(_mockMessagingFactory.Object)
-				 .UsingQueueFor<ICommand>("commands", MessagingEntityCreationOptions.CreateIfDoesntExist)
-				 .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
-				 .AsClientAndServer()
-				 .Create();
+                ServiceBus.Configure()
+                 .WithAzureServiceBusEndpoint<TestMessage>()
+                 .Named("Test Service Bus")
+                 .WithNamespaceManager(_mockNamespaceManager.Object)
+                 .WithMessagingFactory(_mockMessagingFactory.Object)
+                 .UsingQueueFor<ICommand>("commands", MessagingEntityCreationOptions.CreateIfDoesntExist)
+                 .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                 .AsClientAndServer()
+                 .CreateServiceBus();
 
-				_mockNamespaceManager.Verify(nsm => nsm.QueueExists("commands"), Times.Once());
-				_mockNamespaceManager.Verify(nsm => nsm.CreateQueue("commands"), Times.Never);
-			}
-		}
+                _mockNamespaceManager.Verify(nsm => nsm.QueueExists("commands"), Times.Once());
+                _mockNamespaceManager.Verify(nsm => nsm.CreateQueue("commands"), Times.Never);
+            }
+        }
 
-		public class TemporaryMessagingEntityFacts : ConfigurationFacts
+        public class TemporaryMessagingEntityFacts : ConfigurationFacts
         {
             [Fact]
             public void UseTemporaryMessagingEntityThatAlreadyExistsWithoutSpecifyingCanDeleteIfAlreadyExistsShouldThrow()
             {
-				Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("commands", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
-                    .Create();
+                    .CreateServiceBus();
 
-                var exceptionAssertion = action.ShouldThrow<MessagingEntityAlreadyExistsException>();
+                var exceptionAssertion = action.ShouldThrow<Obvs.AzureServiceBus.Configuration.MessagingEntityAlreadyExistsException>();
 
                 exceptionAssertion.And.Path.Should().Be("commands");
                 exceptionAssertion.And.MessagingEntityType.Should().Be(MessagingEntityType.Queue);
@@ -298,14 +298,14 @@ namespace Obvs.AzureServiceBus.Tests
             public void UseTemporaryMessagingEntityThatAlreadyExiststSpecifyingRecreateOptionShouldRecreate()
             {
                 ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("commands", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
-                    .Create();
+                    .CreateServiceBus();
 
                 _mockNamespaceManager.Verify(nsm => nsm.DeleteQueue("commands"), Times.Once);
                 _mockNamespaceManager.Verify(nsm => nsm.CreateQueue("commands"), Times.Once);
@@ -321,14 +321,14 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(false);
 
                 ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingSubscriptionFor<IEvent>("events", "test-subscription", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClient()
-                    .CreateClient();
+                    .CreateServiceBusClient();
 
                 _mockNamespaceManager.Verify(nsm => nsm.TopicExists("events"), Times.Once);
                 _mockNamespaceManager.Verify(nsm => nsm.CreateSubscription("events", "test-subscription"), Times.Once);
@@ -344,19 +344,19 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(false);
 
                 Action action = () => ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingSubscriptionFor<IEvent>("events", "test-subscription", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClient()
-                    .CreateClient();
+                    .CreateServiceBusClient();
 
                 var exceptionAssertion = action.ShouldThrow<MessagingEntityDoesNotAlreadyExistException>();
 
-				exceptionAssertion.And.Path.Should().Be("events");
-				exceptionAssertion.And.MessagingEntityType.Should().Be(MessagingEntityType.Topic);
+                exceptionAssertion.And.Path.Should().Be("events");
+                exceptionAssertion.And.MessagingEntityType.Should().Be(MessagingEntityType.Topic);
             }
 
             [Fact]
@@ -369,7 +369,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(false);
 
                 ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
@@ -377,14 +377,14 @@ namespace Obvs.AzureServiceBus.Tests
                     .UsingSubscriptionFor<IEvent>("events", "test-subscription", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClient()
-                    .CreateClient();
+                    .CreateServiceBusClient();
 
                 _mockNamespaceManager.Verify(nsm => nsm.CreateTopic("events"), Times.Once);
                 _mockNamespaceManager.Verify(nsm => nsm.CreateSubscription("events", "test-subscription"), Times.Once);
             }
 
             [Fact]
-            public void UseTemporarySubscriptionThatAlreadyExistsShouldRereateSubscription()
+            public void UseTemporarySubscriptionThatAlreadyExistsShouldRecreateSubscription()
             {
                 _mockNamespaceManager.Setup(nsm => nsm.TopicExists("events"))
                     .Returns(true);
@@ -393,35 +393,35 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(true);
 
                 ServiceBus.Configure()
-                    .WithAzureServiceBusEndpoint<ITestMessage>()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingSubscriptionFor<IEvent>("events", "test-subscription", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClient()
-                    .CreateClient();
+                    .CreateServiceBusClient();
 
                 _mockNamespaceManager.Verify(nsm => nsm.DeleteSubscription("events", "test-subscription"), Times.Once);
                 _mockNamespaceManager.Verify(nsm => nsm.CreateSubscription("events", "test-subscription"), Times.Once);
             }
         }
 
-        public interface ITestMessage : IMessage
+        public class TestMessage : IMessage
         {
         }
 
-        public class TestEvent : ITestMessage, IEvent
-        {
-
-        }
-
-        public class TestCommand : ITestMessage, ICommand
+        public class TestEvent : TestMessage, IEvent
         {
 
         }
 
-        public class TestRequest : ITestMessage, IRequest
+        public class TestCommand : TestMessage, ICommand
+        {
+
+        }
+
+        public class TestRequest : TestMessage, IRequest
         {
             public string RequestId
             {
@@ -436,7 +436,7 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
-        public class TestResponse : ITestMessage, IResponse
+        public class TestResponse : TestMessage, IResponse
         {
             public string RequestId
             {

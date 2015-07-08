@@ -27,7 +27,7 @@ namespace Obvs.AzureServiceBus.Tests
                     new MessageSource<TestMessage>((IMessageReceiver)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
                 };
 
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "messageReceiver");
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("messageReceiver");
             }
 
             [Fact]
@@ -38,7 +38,7 @@ namespace Obvs.AzureServiceBus.Tests
                     new MessageSource<TestMessage>((IObservable<BrokeredMessage>)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
                 };
 
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "brokeredMessages");
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("brokeredMessages");
             }
 
             [Fact]
@@ -49,7 +49,18 @@ namespace Obvs.AzureServiceBus.Tests
                     new MessageSource<TestMessage>(new Mock<IObservable<BrokeredMessage>>().Object, null);
                 };
 
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "deserializers");
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("deserializers");
+            }
+
+            [Fact]
+            public void CreatingWithNullPeekLockControlProviderThrows()
+            {
+                Action action = () =>
+                {
+                    new MessageSource<TestMessage>(new Mock<IObservable<BrokeredMessage>>().Object, new[] { Mock.Of<IMessageDeserializer<TestMessage>>() }, null);
+                };
+
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("peekLockControlProvider");
             }
         }
 
@@ -193,7 +204,82 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
+        public class PeekLockMessageFacts
+        {
+            [Fact]
+            public async Task CompletingPeekLockMessageCompletesTheAssociatedBrokeredMessage()
+            {
+                Mock<IMessageDeserializer<TestPeekLockMessage>> mockTestPeekLockMessageDeserializer = new Mock<IMessageDeserializer<TestPeekLockMessage>>();
+                mockTestPeekLockMessageDeserializer.Setup(md => md.GetTypeName())
+                    .Returns(typeof(TestPeekLockMessage).Name);
+
+                TestPeekLockMessage testPeekLockMessage = new TestPeekLockMessage();
+
+                mockTestPeekLockMessageDeserializer.Setup(md => md.Deserialize(It.IsAny<Stream>()))
+                    .Returns(testPeekLockMessage);
+
+                BrokeredMessage brokeredMessageThatShouldBeIgnored = new BrokeredMessage()
+                {
+                    Properties =
+                        {
+                            { MessagePropertyNames.TypeName, "SomeMessageTypeThatIDontWant" }
+                        }
+                };
+
+                BrokeredMessage brokeredMessageThatShouldBeReceived = new BrokeredMessage()
+                {
+                    Properties =
+                    {
+                        { MessagePropertyNames.TypeName, typeof(TestPeekLockMessage).Name }
+                    }
+                };
+
+                IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(o =>
+                {
+                    o.OnNext(brokeredMessageThatShouldBeIgnored);
+
+                    o.OnNext(brokeredMessageThatShouldBeReceived);
+
+                    o.OnCompleted();
+
+                    return Disposable.Empty;
+                });
+
+                Mock<IMessagePeekLockControl> brokeredMessagePeekLockControlForMessageThatShouldBeIgnored = new Mock<IMessagePeekLockControl>();
+                Mock<IMessagePeekLockControl> brokeredMessagePeekLockControlForMessageThatShouldBeReceived = new Mock<IMessagePeekLockControl>();
+
+                Mock<IBrokeredMessagePeekLockControlProvider> mockPeekLockControlProvider = new Mock<IBrokeredMessagePeekLockControlProvider>();
+                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(brokeredMessageThatShouldBeIgnored))
+                    .Returns(brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Object);
+
+                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(brokeredMessageThatShouldBeReceived))
+                    .Returns(brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Object);
+
+                MessageSource<TestPeekLockMessage> messageSource = new MessageSource<TestPeekLockMessage>(brokeredMessages, new[] { mockTestPeekLockMessageDeserializer.Object }, mockPeekLockControlProvider.Object);
+
+                TestPeekLockMessage message = await messageSource.Messages.SingleOrDefaultAsync();
+
+                IMessagePeekLockControl messagePeekLockControl = message.GetPeekLockControl();
+                    
+                messagePeekLockControl.Should().NotBeNull();
+
+                await messagePeekLockControl.CompleteAsync();
+
+                brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Verify(bmplc => bmplc.CompleteAsync(), Times.Never);
+                brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Verify(bmplc => bmplc.CompleteAsync(), Times.Once);
+            }
+        }
+
         public class TestMessage : IMessage
+        {
+            public int TestId
+            {
+                get;
+                set;
+            }
+        }
+
+        public class TestPeekLockMessage : PeekLockMessage
         {
             public int TestId
             {

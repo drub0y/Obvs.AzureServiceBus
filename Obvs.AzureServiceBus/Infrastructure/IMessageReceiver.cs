@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Configuration;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
     public interface IMessageReceiver : IDisposable
     {
-        ReceiveMode Mode
+        MessageReceiveMode Mode
         {
             get;
         }

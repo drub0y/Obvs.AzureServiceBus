@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Configuration;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
@@ -20,9 +21,9 @@ namespace Obvs.AzureServiceBus.Infrastructure
             return new MessageSenderWrapper(_messagingFactory.CreateMessageSender(entityPath));
         }
 
-        public IMessageReceiver CreateMessageReceiver(string entityPath)
+        public IMessageReceiver CreateMessageReceiver(string entityPath, MessageReceiveMode receiveMode)
         {
-            return new MessageReceiverWrapper(_messagingFactory.CreateMessageReceiver(entityPath));
-        }
+            return new MessageReceiverWrapper(_messagingFactory.CreateMessageReceiver(entityPath, MessageReceiveModeTranslator.TranslateReceiveModeConfigurationValueToAzureServiceBusValue(receiveMode)));
+        }       
     }
 }

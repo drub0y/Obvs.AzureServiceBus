@@ -11,7 +11,7 @@ using Obvs.Types;
 namespace Obvs.AzureServiceBus
 {
     public class MessagePublisher<TMessage> : IMessagePublisher<TMessage>
-        where TMessage : IMessage
+        where TMessage : class
     {
         private IMessageSender _messageSender;
         private IMessageSerializer _serializer;
@@ -71,10 +71,10 @@ namespace Obvs.AzureServiceBus
         {
             brokeredMessage.Properties.Add(MessagePropertyNames.TypeName, message.GetType().Name);
 
-            foreach(KeyValuePair<string, object> property in properties)
-            {
-                brokeredMessage.Properties.Add(property);
-            }
+                foreach(KeyValuePair<string, object> property in properties)
+                {
+                    brokeredMessage.Properties.Add(property);
+                }
         }
 
         private void SetCorrelationIdentifiersIfApplicable(TMessage message, BrokeredMessage brokeredMessage)
@@ -92,7 +92,7 @@ namespace Obvs.AzureServiceBus
                 if(responseMessage != null)
                 {
                     _requestCorrelationProvider.MapFromResponse(responseMessage, brokeredMessage);
-                }
+                }                
             }
         }
     }
