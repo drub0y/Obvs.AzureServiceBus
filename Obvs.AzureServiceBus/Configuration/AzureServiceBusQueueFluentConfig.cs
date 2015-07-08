@@ -226,7 +226,7 @@ namespace Obvs.AzureServiceBus.Configuration
             return this;
         }
 
-        public ICanSpecifyEndpointSerializers<TMessage, TCommand, TEvent, TRequest, TResponse> UsingMessagePropertyProviderFor<T>(IMessagePropertyProvider<T> messagePropertyProvider) where T : class, TMessage
+        public ICanSpecifyPropertyProviders<TMessage, TCommand, TEvent, TRequest, TResponse> UsingMessagePropertyProviderFor<T>(IMessagePropertyProvider<T> messagePropertyProvider) where T : class, TMessage
         {
             if(messagePropertyProvider == null) throw new ArgumentNullException("provider");
 

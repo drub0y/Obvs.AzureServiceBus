@@ -440,6 +440,35 @@ namespace Obvs.AzureServiceBus.Tests
             }
 
             [Fact]
+            public void ConfigureProvidersForMultipleMessageTypes()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<TestCommand>(new FuncMessagePropertyProvider<TestCommand>(tc => new KeyValuePair<string, object>("CommandProp", "CommandPropValue")))
+                    .UsingMessagePropertyProviderFor<TestEvent>(new FuncMessagePropertyProvider<TestEvent>(tc => new KeyValuePair<string, object>("EventProp", "EventPropValue")))
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer();
+            }
+
+            public void ConfigureMultipleProvidersForSameMessageType()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<TestCommand>(new FuncMessagePropertyProvider<TestCommand>(tc => new KeyValuePair<string, object>("CommandProp1", "CommandPropValue1")))
+                    .UsingMessagePropertyProviderFor<TestCommand>(new FuncMessagePropertyProvider<TestCommand>(tc => new KeyValuePair<string, object>("CommandProp2", "CommandPropValue2")))
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer();
+            }
+
+            [Fact]
             public async Task EnsureProvidedPropertiesArePresent()
             {
                 BrokeredMessage brokeredMessage = null;
@@ -452,10 +481,12 @@ namespace Obvs.AzureServiceBus.Tests
                 _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
                     .Returns(mockMessageSender.Object);
 
-                CompositeMessagePropertyProvider<TestCommand> pp = new CompositeMessagePropertyProvider<TestCommand>();
-                pp.Providers.AddRange(
+                CompositeMessagePropertyProvider<TestCommand> propertyProvider = new CompositeMessagePropertyProvider<TestCommand>();
+                propertyProvider.Providers.AddRange(
                         c => new KeyValuePair<string, object>("SomeProp", "SomeValue"),
                         c => new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"));
+
+                FuncMessagePropertyProvider<TestCommand> propertyProvider2 = new FuncMessagePropertyProvider<TestCommand>(c => new KeyValuePair<string, object>("SomeThirdProp", "SomeThirdValue"));
 
                 IServiceBus serviceBus = ServiceBus.Configure()
                     .WithAzureServiceBusEndpoint<TestMessage>()
@@ -463,7 +494,8 @@ namespace Obvs.AzureServiceBus.Tests
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("test")
-                    .UsingMessagePropertyProviderFor<TestCommand>(pp)
+                    .UsingMessagePropertyProviderFor<TestCommand>(propertyProvider)
+                    .UsingMessagePropertyProviderFor<TestCommand>(propertyProvider2)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
                     .Create();
@@ -474,7 +506,8 @@ namespace Obvs.AzureServiceBus.Tests
 
                 brokeredMessage.Properties.Should()
                     .Contain(new KeyValuePair<string, object>("SomeProp", "SomeValue"))
-                    .And.Contain(new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"));
+                    .And.Contain(new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"))
+                    .And.Contain(new KeyValuePair<string, object>("SomeThirdProp", "SomeThirdValue"));
             }
         }
 
