@@ -18,7 +18,7 @@ namespace Obvs.AzureServiceBus.Configuration
             where TRequest : class, TMessage
             where TResponse : class, TMessage
         {
-            return new AzureServiceBusQueueFluentConfig<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(canAddEndpoint);
+            return new AzureServiceBusFluentConfig<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(canAddEndpoint);
         }
 
         public static ICanAddAzureServiceBusServiceName<IMessage, ICommand, IEvent, IRequest, IResponse> WithAzureServiceBusEndpoint<TServiceMessage>(this ICanAddEndpoint<IMessage, ICommand, IEvent, IRequest, IResponse> canAddEndpoint) where TServiceMessage : class

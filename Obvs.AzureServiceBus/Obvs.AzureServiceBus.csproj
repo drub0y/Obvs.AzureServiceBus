@@ -69,8 +69,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\AzureServiceBusConfigExtensions.cs" />
-    <Compile Include="Configuration\AzureServiceBusQueueEndpointProvider.cs" />
-    <Compile Include="Configuration\AzureServiceBusQueueFluentConfig.cs" />
+    <Compile Include="Configuration\AzureServiceBusEndpointProvider.cs" />
+    <Compile Include="Configuration\AzureServiceBusFluentConfig.cs" />
     <Compile Include="Configuration\ConfigurationUtilities.cs" />
     <Compile Include="Infrastructure\PeekLockMessageControl.cs" />
     <Compile Include="PeekLockMessage.cs" />

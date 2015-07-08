@@ -13,7 +13,7 @@ using Obvs.Types;
 
 namespace Obvs.AzureServiceBus.Configuration
 {
-    public class AzureServiceBusQueueEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> : ServiceEndpointProviderBase<TMessage, TCommand, TEvent, TRequest, TResponse>
+    public class AzureServiceBusEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> : ServiceEndpointProviderBase<TMessage, TCommand, TEvent, TRequest, TResponse>
         where TMessage : class
         where TCommand : class, TMessage
         where TEvent : class, TMessage
@@ -28,7 +28,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly MessageClientEntityFactory _messageClientEntityFactory;
         private readonly MessagePropertyProviderManager _messagePropertyProviderManager;
 
-        public AzureServiceBusQueueEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, Func<Assembly, bool> assemblyFilter, Func<Type, bool> typeFilter, MessagePropertyProviderManager messagePropertyProviderManager)
+        public AzureServiceBusEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, Func<Assembly, bool> assemblyFilter, Func<Type, bool> typeFilter, MessagePropertyProviderManager messagePropertyProviderManager)
             : base(serviceName)
         {
             _serializer = serializer;

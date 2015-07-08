@@ -68,7 +68,7 @@ namespace Obvs.AzureServiceBus.Configuration
         ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage;
     }
 
-    internal class AzureServiceBusQueueFluentConfig<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> : ICanAddAzureServiceBusServiceName<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanCreateEndpointAsClientOrServer<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyEndpointSerializers<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyPropertyProviders<TMessage, TCommand, TEvent, TRequest, TResponse>
+    internal class AzureServiceBusFluentConfig<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> : ICanAddAzureServiceBusServiceName<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanCreateEndpointAsClientOrServer<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyEndpointSerializers<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyPropertyProviders<TMessage, TCommand, TEvent, TRequest, TResponse>
         where TMessage : class
         where TCommand : class, TMessage
         where TEvent : class, TMessage
@@ -87,7 +87,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private INamespaceManager _namespaceManager;
         private MessagePropertyProviderManager _messagePropertyProviderManager = new MessagePropertyProviderManager();
 
-        public AzureServiceBusQueueFluentConfig(ICanAddEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse> canAddEndpoint)
+        public AzureServiceBusFluentConfig(ICanAddEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse> canAddEndpoint)
         {
             _canAddEndpoint = canAddEndpoint;
         }
@@ -113,14 +113,14 @@ namespace Obvs.AzureServiceBus.Configuration
             return _canAddEndpoint.WithEndpoints(CreateProvider());
         }
 
-        private AzureServiceBusQueueEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> CreateProvider()
+        private AzureServiceBusEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> CreateProvider()
         {
             if(_messagingFactory == null)
             {
                 _messagingFactory = new MessagingFactoryWrapper(MessagingFactory.Create(_namespaceManager.Address, _namespaceManager.Settings.TokenProvider));
             }
 
-            return new AzureServiceBusQueueEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyFilter, _typeFilter, _messagePropertyProviderManager);
+            return new AzureServiceBusEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyFilter, _typeFilter, _messagePropertyProviderManager);
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithConnectionString(string connectionString)
