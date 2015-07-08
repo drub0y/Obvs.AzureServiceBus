@@ -10,6 +10,7 @@ using Moq;
 using Obvs.AzureServiceBus.Configuration;
 using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.Configuration;
+using Obvs.MessageProperties;
 using Obvs.Serialization;
 using Obvs.Types;
 using Xunit;
@@ -422,7 +423,7 @@ namespace Obvs.AzureServiceBus.Tests
             }
 
             [Fact]
-            public void ConfiguringAProviderForAMessageThatIsNotDerivedFromTheBaseMessageTypeThrows()
+            public void ConfiguringAProviderForAMessageThatIsNotDerivedFromTheServiceMessageTypeThrows()
             {
                 Action action = () => ServiceBus.Configure()
                     .WithAzureServiceBusEndpoint<TestMessage>()
@@ -430,7 +431,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("test")
-                    .UsingMessagePropertyProviderFor<NotATestMessage>(c => null)
+                    .UsingMessagePropertyProviderFor<NotATestMessage>(new FuncMessagePropertyProvider<NotATestMessage>(c => null))
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer();
 
@@ -451,15 +452,18 @@ namespace Obvs.AzureServiceBus.Tests
                 _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
                     .Returns(mockMessageSender.Object);
 
+                CompositeMessagePropertyProvider<TestCommand> pp = new CompositeMessagePropertyProvider<TestCommand>();
+                pp.Providers.AddRange(
+                        c => new KeyValuePair<string, object>("SomeProp", "SomeValue"),
+                        c => new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"));
+
                 IServiceBus serviceBus = ServiceBus.Configure()
                     .WithAzureServiceBusEndpoint<TestMessage>()
                     .Named("Test Service Bus")
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("test")
-                    .UsingMessagePropertyProvidersFor<TestCommand>(
-                            c => new KeyValuePair<string, object>("SomeProp", "SomeValue"),
-                            c => new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"))
+                    .UsingMessagePropertyProviderFor<TestCommand>(pp)
                     .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
                     .AsClientAndServer()
                     .Create();
