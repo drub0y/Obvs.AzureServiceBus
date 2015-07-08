@@ -11,7 +11,7 @@ using Obvs.Types;
 namespace Obvs.AzureServiceBus
 {
     public class MessagePublisher<TMessage> : IMessagePublisher<TMessage>
-        where TMessage : IMessage
+        where TMessage : class
     {
         private IMessageSender _messageSender;
         private IMessageSerializer _serializer;

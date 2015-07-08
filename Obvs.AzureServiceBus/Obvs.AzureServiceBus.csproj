@@ -39,7 +39,7 @@
       <HintPath>..\packages\Microsoft.WindowsAzure.ConfigurationManager.3.1.0\lib\net40\Microsoft.WindowsAzure.Configuration.dll</HintPath>
     </Reference>
     <Reference Include="Obvs, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Obvs.1.7.0-beta\lib\net45\Obvs.dll</HintPath>
+      <HintPath>..\packages\Obvs.2.1.0-beta\lib\net45\Obvs.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />

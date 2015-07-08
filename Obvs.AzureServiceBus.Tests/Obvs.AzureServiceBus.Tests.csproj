@@ -52,7 +52,7 @@
       <HintPath>..\packages\Moq.4.2.1502.0911\lib\net40\Moq.dll</HintPath>
     </Reference>
     <Reference Include="Obvs, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Obvs.1.7.0-beta\lib\net45\Obvs.dll</HintPath>
+      <HintPath>..\packages\Obvs.2.1.0-beta\lib\net45\Obvs.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
