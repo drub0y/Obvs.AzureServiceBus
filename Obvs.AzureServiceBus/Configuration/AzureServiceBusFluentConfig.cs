@@ -85,7 +85,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings = new List<MessageTypePathMappingDetails>();
         private IMessagingFactory _messagingFactory;
         private INamespaceManager _namespaceManager;
-        private MessagePropertyProviderManager _messagePropertyProviderManager = new MessagePropertyProviderManager();
+        private MessagePropertyProviderManager<TMessage> _messagePropertyProviderManager = new MessagePropertyProviderManager<TMessage>();
 
         public AzureServiceBusFluentConfig(ICanAddEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse> canAddEndpoint)
         {
