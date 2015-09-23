@@ -1,9 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.ServiceBus;
+using Microsoft.ServiceBus.Messaging;
 using Moq;
 using Obvs.AzureServiceBus.Configuration;
 using Obvs.AzureServiceBus.Infrastructure;
+using Obvs.Configuration;
+using Obvs.MessageProperties;
 using Obvs.Serialization;
 using Obvs.Types;
 using Xunit;
@@ -392,6 +399,118 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
+        public class PropertyProviderConfigurationFacts : ConfigurationFacts
+        {
+            private class NotATestMessage : IMessage
+            {
+
+            }
+
+            [Fact]
+            public void ConfiguringANullProviderInstanceThrows()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<TestCommand>(null)
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer();
+
+                action.ShouldThrow<ArgumentNullException>();
+            }
+
+            [Fact]
+            public void ConfiguringAProviderForAMessageThatIsNotDerivedFromTheServiceMessageTypeThrows()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<NotATestMessage>(new FuncMessagePropertyProvider<NotATestMessage>(c => null))
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer();
+
+                action.ShouldThrow<ArgumentException>()
+                    .And.ParamName.Should().Be("messagePropertyProvider");
+            }
+
+            [Fact]
+            public void ConfigureProvidersForMultipleMessageTypes()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<TestCommand>(new FuncMessagePropertyProvider<TestCommand>(tc => new KeyValuePair<string, object>("CommandProp", "CommandPropValue")))
+                    .UsingMessagePropertyProviderFor<TestEvent>(new FuncMessagePropertyProvider<TestEvent>(tc => new KeyValuePair<string, object>("EventProp", "EventPropValue")))
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer();
+            }
+
+            public void ConfigureMultipleProvidersForSameMessageType()
+            {
+                Action action = () => ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<TestCommand>(new FuncMessagePropertyProvider<TestCommand>(tc => new KeyValuePair<string, object>("CommandProp1", "CommandPropValue1")))
+                    .UsingMessagePropertyProviderFor<TestCommand>(new FuncMessagePropertyProvider<TestCommand>(tc => new KeyValuePair<string, object>("CommandProp2", "CommandPropValue2")))
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer();
+            }
+
+            [Fact]
+            public async Task EnsureProvidedPropertiesArePresent()
+            {
+                BrokeredMessage brokeredMessage = null;
+
+                Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
+                mockMessageSender.Setup(ms => ms.SendAsync(It.IsAny<BrokeredMessage>()))
+                    .Callback<BrokeredMessage>(bm => brokeredMessage = bm)
+                    .Returns(Task.FromResult(true));
+
+                _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
+                    .Returns(mockMessageSender.Object);
+
+                CompositeMessagePropertyProvider<TestCommand> propertyProvider = new CompositeMessagePropertyProvider<TestCommand>();
+                propertyProvider.Providers.AddRange(
+                        c => new KeyValuePair<string, object>("SomeProp", "SomeValue"),
+                        c => new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"));
+
+                FuncMessagePropertyProvider<TestCommand> propertyProvider2 = new FuncMessagePropertyProvider<TestCommand>(c => new KeyValuePair<string, object>("SomeThirdProp", "SomeThirdValue"));
+
+                IServiceBus serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithNamespaceManager(_mockNamespaceManager.Object)
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<ICommand>("test")
+                    .UsingMessagePropertyProviderFor<TestCommand>(propertyProvider)
+                    .UsingMessagePropertyProviderFor<TestCommand>(propertyProvider2)
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer()
+                    .Create();
+
+                await serviceBus.SendAsync(new TestCommand());
+
+                brokeredMessage.Should().NotBeNull();
+
+                brokeredMessage.Properties.Should()
+                    .Contain(new KeyValuePair<string, object>("SomeProp", "SomeValue"))
+                    .And.Contain(new KeyValuePair<string, object>("SomeOtherProp", "SomeOtherValue"))
+                    .And.Contain(new KeyValuePair<string, object>("SomeThirdProp", "SomeThirdValue"));
+            }
+        }
+
         public class TestMessage : IMessage
         {
         }
@@ -403,7 +522,11 @@ namespace Obvs.AzureServiceBus.Tests
 
         public class TestCommand : TestMessage, ICommand
         {
-
+            public string CommandId
+            {
+                get;
+                set;
+            }
         }
 
         public class TestRequest : TestMessage, IRequest
