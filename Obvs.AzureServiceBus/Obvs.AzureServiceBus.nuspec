@@ -10,6 +10,6 @@
         <description>Microsoft Azure Service Bus transport support for the Obvs Framework.</description>
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
-        <releaseNotes>Added overloads for the Using[Queue|Subscription]For configuration APIs that make it possible to specify the ReceiveMode now.</releaseNotes>        
+        <releaseNotes>Adding fluent configuration APIs for specifying Property Provider instances.</releaseNotes>        
     </metadata>
 </package>
