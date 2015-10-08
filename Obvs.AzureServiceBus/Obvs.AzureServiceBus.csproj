@@ -72,9 +72,10 @@
     <Compile Include="Configuration\AzureServiceBusEndpointProvider.cs" />
     <Compile Include="Configuration\AzureServiceBusFluentConfig.cs" />
     <Compile Include="Configuration\ConfigurationUtilities.cs" />
+    <Compile Include="Infrastructure\IMessageClientEntityFactory.cs" />
     <Compile Include="Infrastructure\PeekLockMessageControl.cs" />
     <Compile Include="PeekLockMessage.cs" />
-    <Compile Include="Configuration\MessageClientEntityFactory.cs" />
+    <Compile Include="Infrastructure\MessageClientEntityFactory.cs" />
     <Compile Include="Configuration\ConfigurationExceptions.cs" />
     <Compile Include="Configuration\Unconfigured.cs" />
     <Compile Include="Infrastructure\IMessageReceiver.cs" />

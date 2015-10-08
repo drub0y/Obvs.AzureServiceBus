@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.ServiceBus.Messaging;
+using Obvs.AzureServiceBus.Configuration;
 using Obvs.AzureServiceBus.Infrastructure;
 
-namespace Obvs.AzureServiceBus.Configuration
+namespace Obvs.AzureServiceBus
 {
     public enum MessagingEntityType
     {
@@ -105,7 +105,7 @@ namespace Obvs.AzureServiceBus.Configuration
         }
     }
 
-    internal sealed class MessageClientEntityFactory
+    internal sealed class MessageClientEntityFactory : IMessageClientEntityFactory
     {
         private readonly INamespaceManager _namespaceManager;
         private readonly IMessagingFactory _messagingFactory;
@@ -124,9 +124,9 @@ namespace Obvs.AzureServiceBus.Configuration
             _messageTypePathMappings = messageTypePathMappings;
         }
 
-        public IMessageReceiver CreateMessageReceiver<TMessage>()
+        public IMessageReceiver CreateMessageReceiver(Type messageType)
         {
-            MessageTypePathMappingDetails mappingDetails = GetMappingDetails<TMessage>(MessagingEntityType.Queue, MessagingEntityType.Subscription);
+            MessageTypePathMappingDetails mappingDetails = GetMappingDetails(messageType, MessagingEntityType.Queue, MessagingEntityType.Subscription);
 
             IMessageReceiver messageReceiver;
 
@@ -134,21 +134,21 @@ namespace Obvs.AzureServiceBus.Configuration
             {
                 EnsureMessagingEntityExists(mappingDetails);
                 
-                messageReceiver = _messagingFactory.CreateMessageReceiver(mappingDetails.Path, mappingDetails.ReceiveMode);
+                messageReceiver = _messagingFactory.CreateMessageReceiver(messageType, mappingDetails.Path, mappingDetails.ReceiveMode);
             }
             else
             {
                 // TODO: log
 
-                messageReceiver = UnconfiguredMessageReceiver<TMessage>.Default;
+                messageReceiver = new UnconfiguredMessageReceiver(messageType);
             }
 
             return messageReceiver;
         }
 
-        public IMessageSender CreateMessageSender<TMessage>()
+        public IMessageSender CreateMessageSender(Type messageType)
         {
-            MessageTypePathMappingDetails mappingDetails = GetMappingDetails<TMessage>(MessagingEntityType.Queue, MessagingEntityType.Topic);
+            MessageTypePathMappingDetails mappingDetails = GetMappingDetails(messageType, MessagingEntityType.Queue, MessagingEntityType.Topic);
 
             IMessageSender messageSender;
             
@@ -156,13 +156,12 @@ namespace Obvs.AzureServiceBus.Configuration
             {
                 EnsureMessagingEntityExists(mappingDetails);
                 
-                messageSender = _messagingFactory.CreateMessageSender(mappingDetails.Path);
+                messageSender = _messagingFactory.CreateMessageSender(messageType, mappingDetails.Path);
             }
             else
             {
                 // TODO: log
-
-                messageSender = UnconfiguredMessageSender<TMessage>.Default;
+                messageSender = new UnconfiguredMessageSender(messageType);
             }
 
             return messageSender;
@@ -266,23 +265,40 @@ namespace Obvs.AzureServiceBus.Configuration
             }
         }
 
-        private MessageTypePathMappingDetails GetMappingDetails<TMessage>(params MessagingEntityType[] expectedEntityTypes)
+        private MessageTypePathMappingDetails GetMappingDetails(Type messageType, params MessagingEntityType[] expectedEntityTypes)
         {
-            MessageTypePathMappingDetails mappingDetails;
+            IEnumerable<MessageTypePathMappingDetails> messageTypePathMappingDetailsForMessagingEntityTypes = (from mtpm in _messageTypePathMappings
+                                                                                                               join eet in expectedEntityTypes on mtpm.MessagingEntityType equals eet
+                                                                                                               select mtpm);
 
-            try
+
+            MessageTypePathMappingDetails resolvedMessageTypePathMappingDetails = null;
+
+            foreach(MessageTypePathMappingDetails messageTypePathMappingDetails in messageTypePathMappingDetailsForMessagingEntityTypes)
             {
-                mappingDetails = (from mtpm in _messageTypePathMappings
-                                  join eet in expectedEntityTypes on mtpm.MessagingEntityType equals eet
-                                  where mtpm.MessageType == typeof(TMessage)
-                                  select mtpm).SingleOrDefault();
-            }
-            catch(InvalidOperationException exception)
-            {
-                throw new MoreThanOneMappingExistsForMessageTypeException(typeof(TMessage), expectedEntityTypes, exception);
+                Type supportedMessageType = messageTypePathMappingDetails.MessageType;
+
+                if(supportedMessageType == messageType)
+                {
+                    resolvedMessageTypePathMappingDetails = messageTypePathMappingDetails;
+
+                    break;
+                }
+                else
+                {
+                    if(supportedMessageType.IsAssignableFrom(messageType))
+                    {
+                        if(resolvedMessageTypePathMappingDetails != null)
+                        {
+                            throw new AmbiguosMessageTypeMappingException(messageType, expectedEntityTypes);
+                        }
+
+                        resolvedMessageTypePathMappingDetails = messageTypePathMappingDetails;
+                    }
+                }
             }
 
-            return mappingDetails;
+            return resolvedMessageTypePathMappingDetails;
         }
     }
 }

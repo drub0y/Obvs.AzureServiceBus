@@ -8,8 +8,8 @@ namespace Obvs.AzureServiceBus.Infrastructure
 {
     public interface IMessagingFactory
     {
-        IMessageSender CreateMessageSender(string entityPath);
+        IMessageSender CreateMessageSender(Type messageType, string entityPath);
 
-        IMessageReceiver CreateMessageReceiver(string entityPath, MessageReceiveMode receiveMode);
+        IMessageReceiver CreateMessageReceiver(Type messageType, string entityPath, MessageReceiveMode receiveMode);
     }
 }

@@ -16,14 +16,14 @@ namespace Obvs.AzureServiceBus.Infrastructure
             _messagingFactory = messagingFactory;
         }
 
-        public IMessageSender CreateMessageSender(string entityPath)
+        public IMessageSender CreateMessageSender(Type messageType, string entityPath)
         {
-            return new MessageSenderWrapper(_messagingFactory.CreateMessageSender(entityPath));
+            return new MessageSenderWrapper(messageType, _messagingFactory.CreateMessageSender(entityPath));
         }
 
-        public IMessageReceiver CreateMessageReceiver(string entityPath, MessageReceiveMode receiveMode)
+        public IMessageReceiver CreateMessageReceiver(Type messageType, string entityPath, MessageReceiveMode receiveMode)
         {
-            return new MessageReceiverWrapper(_messagingFactory.CreateMessageReceiver(entityPath, MessageReceiveModeTranslator.TranslateReceiveModeConfigurationValueToAzureServiceBusValue(receiveMode)));
+            return new MessageReceiverWrapper(messageType, _messagingFactory.CreateMessageReceiver(entityPath, MessageReceiveModeTranslator.TranslateReceiveModeConfigurationValueToAzureServiceBusValue(receiveMode)));
         }       
     }
 }

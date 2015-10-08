@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
@@ -190,7 +191,8 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(T), queuePath, MessagingEntityType.Queue, creationOptions, receiveMode));
+            this.AddMessageTypePathMapping(new MessageTypePathMappingDetails(typeof(T), queuePath, MessagingEntityType.Queue, creationOptions, receiveMode));
+            
             return this;
         }
 
@@ -201,7 +203,8 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingTopicFor<T>(string topicPath, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(T), topicPath, MessagingEntityType.Topic, creationOptions));
+            this.AddMessageTypePathMapping(new MessageTypePathMappingDetails(typeof(T), topicPath, MessagingEntityType.Topic, creationOptions));
+
             return this;
         }
 
@@ -222,7 +225,8 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            _messageTypePathMappings.Add(new MessageTypePathMappingDetails(typeof(T), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions, receiveMode));
+            this.AddMessageTypePathMapping(new MessageTypePathMappingDetails(typeof(T), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions, receiveMode));
+
             return this;
         }
 
@@ -235,6 +239,17 @@ namespace Obvs.AzureServiceBus.Configuration
             _messagePropertyProviderManager.Add(messagePropertyProvider);
 
             return this;
+        }
+        private void AddMessageTypePathMapping(MessageTypePathMappingDetails messageTypePathMappingDetails)
+        {
+            MessageTypePathMappingDetails existingMessageTypePathMapping = _messageTypePathMappings.FirstOrDefault(mtpm => mtpm.MessageType == messageTypePathMappingDetails.MessageType && mtpm.MessagingEntityType == messageTypePathMappingDetails.MessagingEntityType);
+
+            if(existingMessageTypePathMapping != null)
+            {
+                throw new MappingAlreadyExistsForMessageTypeException(existingMessageTypePathMapping.MessageType, existingMessageTypePathMapping.MessagingEntityType);
+            }
+
+            _messageTypePathMappings.Add(messageTypePathMappingDetails);
         }
     }
 }

@@ -36,9 +36,9 @@ namespace Obvs.AzureServiceBus.Tests
 
             _mockMessagingFactory = new Mock<IMessagingFactory>();
 
-            _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(It.IsAny<string>(), It.IsAny<MessageReceiveMode>()))
+            _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(It.IsAny<Type>(), It.IsAny<string>(), It.IsAny<MessageReceiveMode>()))
                 .Returns(new Mock<IMessageReceiver>().Object);
-            _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
+            _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<Type>(), It.IsAny<string>()))
                 .Returns(new Mock<IMessageSender>().Object);
 
             _mockMessageSerializer = new Mock<IMessageSerializer>();
@@ -108,19 +108,16 @@ namespace Obvs.AzureServiceBus.Tests
                     .WithNamespaceManager(_mockNamespaceManager.Object)
                     .WithMessagingFactory(_mockMessagingFactory.Object)
                     .UsingQueueFor<ICommand>("commands")
-                    .UsingQueueFor<ICommand>("commandsAgain")
-                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
-                    .AsClientAndServer()
-                    .CreateServiceBus();
+                    .UsingQueueFor<ICommand>("commandsAgain");
 
-                var exceptionAssertion = action.ShouldThrow<MoreThanOneMappingExistsForMessageTypeException>();
+                var exceptionAssertion = action.ShouldThrow<MappingAlreadyExistsForMessageTypeException>();
 
                 exceptionAssertion.And.MessageType.Should().Be(typeof(ICommand));
-                exceptionAssertion.And.ExpectedEntityTypes.Should().BeEquivalentTo(MessagingEntityType.Queue, MessagingEntityType.Topic);
+                exceptionAssertion.And.EntityType.Should().Be(MessagingEntityType.Queue);
             }
 
             [Fact]
-            public void ConfigureCommandMessageTypeOnlyShouldBeAbleToSendReceiveCommands()
+            public async Task ConfigureCommandMessageTypeOnlyShouldBeAbleToSendReceiveCommands()
             {
                 IServiceBus<IMessage, ICommand, IEvent, IRequest, IResponse> serviceBus = ServiceBus.Configure()
                     .WithAzureServiceBusEndpoint<TestMessage>()
@@ -134,7 +131,7 @@ namespace Obvs.AzureServiceBus.Tests
 
                 serviceBus.Should().NotBeNull();
 
-                serviceBus.SendAsync(new TestCommand());
+                await serviceBus.SendAsync(new TestCommand());
             }
 
             [Fact]
@@ -203,20 +200,20 @@ namespace Obvs.AzureServiceBus.Tests
                 _mockNamespaceManager.Verify(nsm => nsm.TopicExists("events"), Times.Once());
                 _mockNamespaceManager.Verify(nsm => nsm.SubscriptionExists("events", "my-event-subscription"), Times.Once());
 
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("commands"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("commands", MessageReceiveMode.PeekLock), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender(typeof(ICommand), "commands"), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(typeof(ICommand), "commands", MessageReceiveMode.PeekLock), Times.Once());
 
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("requests"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("requests", MessageReceiveMode.PeekLock), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender(typeof(IRequest), "requests"), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(typeof(IRequest), "requests", MessageReceiveMode.PeekLock), Times.Once());
 
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("responses"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("responses", MessageReceiveMode.PeekLock), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender(typeof(IResponse), "responses"), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(typeof(IResponse), "responses", MessageReceiveMode.PeekLock), Times.Once());
 
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("events"), Times.Once());
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events", MessageReceiveMode.PeekLock), Times.Never);
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender(typeof(IEvent), "events"), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(typeof(IEvent), "events", MessageReceiveMode.PeekLock), Times.Never);
 
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender("events/subscriptions/my-event-subscription"), Times.Never);
-                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver("events/subscriptions/my-event-subscription", MessageReceiveMode.PeekLock), Times.Once());
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageSender(typeof(IEvent), "events/subscriptions/my-event-subscription"), Times.Never);
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(typeof(IEvent), "events/subscriptions/my-event-subscription", MessageReceiveMode.PeekLock), Times.Once());
             }
         }
 
@@ -478,7 +475,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Callback<BrokeredMessage>(bm => brokeredMessage = bm)
                     .Returns(Task.FromResult(true));
 
-                _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<string>()))
+                _mockMessagingFactory.Setup(mf => mf.CreateMessageSender(It.IsAny<Type>(), It.IsAny<string>()))
                     .Returns(mockMessageSender.Object);
 
                 CompositeMessagePropertyProvider<TestCommand> propertyProvider = new CompositeMessagePropertyProvider<TestCommand>();

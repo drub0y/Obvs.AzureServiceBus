@@ -5,16 +5,44 @@ using System.Runtime.Serialization;
 namespace Obvs.AzureServiceBus.Configuration
 {
     [Serializable]
-    public class MoreThanOneMappingExistsForMessageTypeException : Exception
+    public class MappingAlreadyExistsForMessageTypeException : Exception
     {
-        public MoreThanOneMappingExistsForMessageTypeException(Type messageType, IEnumerable<MessagingEntityType> expectedEntityTypes, Exception innerException)
-            : base(string.Format("More than one mapping exists for message type {0} for expected entity types {1}", messageType.Name, string.Join(", ", expectedEntityTypes)), innerException)
+        public MappingAlreadyExistsForMessageTypeException(Type messageType, MessagingEntityType entityType)
+            : base(string.Format("A mapping already exists for message type {0} for entity type {1}", messageType.Name, entityType))
+        {
+            MessageType = messageType;
+            EntityType = entityType;
+        }
+
+        protected MappingAlreadyExistsForMessageTypeException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+
+        public Type MessageType
+        {
+            get;
+            private set;
+        }
+
+        public MessagingEntityType EntityType
+        {
+            get;
+            private set;
+        }
+    }
+
+    [Serializable]
+    public class AmbiguosMessageTypeMappingException : Exception
+    {
+        public AmbiguosMessageTypeMappingException(Type messageType, IEnumerable<MessagingEntityType> expectedEntityTypes)
+            : base(string.Format("More than one mapping exists for message type {0} for expected entity types {1}", messageType.Name, string.Join(", ", expectedEntityTypes)))
         {
             MessageType = messageType;
             ExpectedEntityTypes = expectedEntityTypes;
         }
 
-        protected MoreThanOneMappingExistsForMessageTypeException(SerializationInfo info, StreamingContext context)
+        protected AmbiguosMessageTypeMappingException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }

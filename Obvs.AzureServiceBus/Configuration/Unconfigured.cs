@@ -5,14 +5,26 @@ using Obvs.AzureServiceBus.Infrastructure;
 
 namespace Obvs.AzureServiceBus.Configuration
 {
-    internal sealed class UnconfiguredMessageSender<TMessage> : IMessageSender
+    internal sealed class UnconfiguredMessageSender : IMessageSender
     {
-        public static readonly UnconfiguredMessageSender<TMessage> Default = new UnconfiguredMessageSender<TMessage>();
+        private readonly Type _messageType;
 
+        public UnconfiguredMessageSender(Type messageType)
+        {
+            _messageType = messageType;
+        }
+
+        public Type SupportedMessageType
+        {
+            get
+            {
+                return _messageType;
+            }
+        }
 
         public Task SendAsync(BrokeredMessage brokeredMessage)
         {
-            throw new InvalidOperationException(string.Format("An attempt was made to send an unconfigured message of type {0}. You must configure the provider with a mapping for this type if you want to be able to send it.", typeof(TMessage).Name));
+            throw new InvalidOperationException(string.Format("An attempt was made to send an unconfigured message of type {0}. You must configure the provider with a mapping for this type if you want to be able to send it.", _messageType.Name));
         }
 
         public void Dispose()
@@ -20,9 +32,22 @@ namespace Obvs.AzureServiceBus.Configuration
         }
     }
 
-    internal sealed class UnconfiguredMessageReceiver<TMessage> : IMessageReceiver
+    internal sealed class UnconfiguredMessageReceiver : IMessageReceiver
     {
-        public static readonly UnconfiguredMessageReceiver<TMessage> Default = new UnconfiguredMessageReceiver<TMessage>();
+        private readonly Type _messageType;
+
+        public UnconfiguredMessageReceiver(Type messageType)
+        {
+            _messageType = messageType;
+        }
+
+        public Type SupportedMessageType
+        {
+            get
+            {
+                return _messageType;
+            }
+        }
 
         public MessageReceiveMode Mode
         {
@@ -42,7 +67,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public Task<BrokeredMessage> ReceiveAsync()
         {
-            throw new InvalidOperationException(string.Format("An attempt was made to receive an unconfigured message of type {0}. You must configure the provider with a mapping for this type if you want to be able to receive it.", typeof(TMessage).Name));
+            throw new InvalidOperationException(string.Format("An attempt was made to receive an unconfigured message of type {0}. You must configure the provider with a mapping for this type if you want to be able to receive it.", _messageType.Name));
         }
 
         public void Dispose()

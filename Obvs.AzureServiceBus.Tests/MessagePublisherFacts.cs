@@ -19,25 +19,14 @@ namespace Obvs.AzureServiceBus.Tests
         public class ConstructorFacts
         {
             [Fact]
-            public void CreatingWithNullMessageSenderThrows()
+            public void CreatingWithNullIMessageClientEntityFactorySenderThrows()
             {
                 Action action = () =>
                 {
-                    new MessagePublisher<TestMessage>((MessageSender)null, new Mock<IMessageSerializer>().Object, new Mock<IMessagePropertyProvider<TestMessage>>().Object);
+                    new MessagePublisher<TestMessage>((IMessageClientEntityFactory)null, new Mock<IMessageSerializer>().Object, new Mock<IMessagePropertyProvider<TestMessage>>().Object);
                 };
 
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "messageSender");
-            }
-
-            [Fact]
-            public void CreatingWithNullIMessageSenderThrows()
-            {
-                Action action = () =>
-                {
-                    new MessagePublisher<TestMessage>((IMessageSender)null, new Mock<IMessageSerializer>().Object, new Mock<IMessagePropertyProvider<TestMessage>>().Object);
-                };
-
-                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "messageSender");
+                action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "messageClientEntityFactory");
             }
 
             [Fact]
@@ -45,7 +34,7 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessagePublisher<TestMessage>(new Mock<IMessageSender>().Object, null, new Mock<IMessagePropertyProvider<TestMessage>>().Object);
+                    new MessagePublisher<TestMessage>(Mock.Of<IMessageClientEntityFactory>(), null, new Mock<IMessagePropertyProvider<TestMessage>>().Object);
                 };
 
                 action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "serializer");
@@ -56,7 +45,7 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessagePublisher<TestMessage>(new Mock<IMessageSender>().Object, new Mock<IMessageSerializer>().Object, null);
+                    new MessagePublisher<TestMessage>(Mock.Of<IMessageClientEntityFactory>(), new Mock<IMessageSerializer>().Object, null);
                 };
 
                 action.ShouldThrow<ArgumentNullException>().Where(e => e.ParamName == "propertyProvider");
@@ -68,13 +57,9 @@ namespace Obvs.AzureServiceBus.Tests
             [Fact]
             public void SerializesMessage()
             {
-                Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
-
                 Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
 
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-                
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(Mock.Of<IMessageClientEntityFactory>(), mockMessageSerializer.Object, Mock.Of<IMessagePropertyProvider<TestMessage>>());
 
                 TestMessage message = new TestMessage();
 
@@ -96,6 +81,10 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
+                Mock<IMessageClientEntityFactory> mockMessageClientEntityFactory = new Mock<IMessageClientEntityFactory>();
+                mockMessageClientEntityFactory.Setup(mcef => mcef.CreateMessageSender(It.IsAny<Type>()))
+                    .Returns(mockMessageSender.Object);
+
                 Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
 
                 Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
@@ -109,7 +98,7 @@ namespace Obvs.AzureServiceBus.Tests
                 mockMessagePropertyProvider.Setup(mpp => mpp.GetProperties(It.IsAny<TestMessage>()))
                     .Returns(properties);
 
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageClientEntityFactory.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
 
                 TestMessage message = new TestMessage();
 
@@ -137,11 +126,15 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
+                Mock<IMessageClientEntityFactory> mockMessageClientEntityFactory = new Mock<IMessageClientEntityFactory>();
+                mockMessageClientEntityFactory.Setup(mcef => mcef.CreateMessageSender(It.IsAny<Type>()))
+                    .Returns(mockMessageSender.Object);
+
                 Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
 
                 Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
 
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageClientEntityFactory.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
 
                 TestMessage message = new TestMessage();
 
@@ -156,12 +149,11 @@ namespace Obvs.AzureServiceBus.Tests
             public async Task SendsMessage()
             {
                 Mock<IMessageSender> mockMessageSender = new Mock<IMessageSender>();
+                Mock<IMessageClientEntityFactory> mockMessageClientEntityFactory = new Mock<IMessageClientEntityFactory>();
+                mockMessageClientEntityFactory.Setup(mcef => mcef.CreateMessageSender(It.IsAny<Type>()))
+                    .Returns(mockMessageSender.Object);
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
-
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageClientEntityFactory.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<TestMessage>>());
 
                 TestMessage message = new TestMessage();
 
@@ -187,11 +179,11 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
+                Mock<IMessageClientEntityFactory> mockMessageClientEntityFactory = new Mock<IMessageClientEntityFactory>();
+                mockMessageClientEntityFactory.Setup(mcef => mcef.CreateMessageSender(It.IsAny<Type>()))
+                    .Returns(mockMessageSender.Object);
 
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageClientEntityFactory.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<TestMessage>>());
 
                 TestRequest request = new TestRequest();
 
@@ -218,11 +210,11 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
+                Mock<IMessageClientEntityFactory> mockMessageClientEntityFactory = new Mock<IMessageClientEntityFactory>();
+                mockMessageClientEntityFactory.Setup(mcef => mcef.CreateMessageSender(It.IsAny<Type>()))
+                    .Returns(mockMessageSender.Object);
 
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageClientEntityFactory.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<TestMessage>>());
 
                 TestRequest request = new TestRequest
                 {
@@ -251,11 +243,11 @@ namespace Obvs.AzureServiceBus.Tests
                     })
                     .Returns(Task.FromResult<object>(null));
 
-                Mock<IMessageSerializer> mockMessageSerializer = new Mock<IMessageSerializer>();
+                Mock<IMessageClientEntityFactory> mockMessageClientEntityFactory = new Mock<IMessageClientEntityFactory>();
+                mockMessageClientEntityFactory.Setup(mcef => mcef.CreateMessageSender(It.IsAny<Type>()))
+                    .Returns(mockMessageSender.Object);
 
-                Mock<IMessagePropertyProvider<TestMessage>> mockMessagePropertyProvider = new Mock<IMessagePropertyProvider<TestMessage>>();
-
-                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageSender.Object, mockMessageSerializer.Object, mockMessagePropertyProvider.Object);
+                MessagePublisher<TestMessage> messagePublisher = new MessagePublisher<TestMessage>(mockMessageClientEntityFactory.Object, Mock.Of<IMessageSerializer>(), Mock.Of<IMessagePropertyProvider<TestMessage>>());
 
                 TestRequest request = new TestRequest
                 {

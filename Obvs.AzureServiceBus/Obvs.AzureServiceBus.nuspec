@@ -10,6 +10,6 @@
         <description>Microsoft Azure Service Bus transport support for the Obvs Framework.</description>
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
-        <releaseNotes>Adding fluent configuration APIs for specifying Property Provider instances.</releaseNotes>        
+        <releaseNotes>Adding support for multiple message types to Azure Service Bus entities within the same Obvs Service Bus instance.</releaseNotes>
     </metadata>
 </package>
