@@ -10,7 +10,6 @@ using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.MessageProperties;
 using Obvs.Serialization;
-using Obvs.Types;
 
 namespace Obvs.AzureServiceBus
 {
@@ -22,8 +21,8 @@ namespace Obvs.AzureServiceBus
         private CancellationTokenSource _messageReceiverBrokeredMessageObservableCancellationTokenSource;
         private IBrokeredMessagePeekLockControlProvider _peekLockControlProvider;
 
-        public MessageSource(IMessageClientEntityFactory messageClientEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
-            : this(messageClientEntityFactory, deserializers, BrokeredMessagePeekLockControlProvider.Default)
+        public MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
+            : this(messagingEntityFactory, deserializers, BrokeredMessagePeekLockControlProvider.Default)
         {            
         }
 
@@ -32,11 +31,11 @@ namespace Obvs.AzureServiceBus
         {            
         }
 
-        internal MessageSource(IMessageClientEntityFactory messageClientEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
+        internal MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
         {
-            if(messageClientEntityFactory == null) throw new ArgumentNullException("messageClientEntityFactory");
+            if(messagingEntityFactory == null) throw new ArgumentNullException("messagingEntityFactory");
 
-            IMessageReceiver messageReceiver = messageClientEntityFactory.CreateMessageReceiver(typeof(TMessage));
+            IMessageReceiver messageReceiver = messagingEntityFactory.CreateMessageReceiver(typeof(TMessage));
 
             IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messageReceiver);
 

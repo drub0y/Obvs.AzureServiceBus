@@ -73,12 +73,12 @@
     <Compile Include="Configuration\AzureServiceBusFluentConfig.cs" />
     <Compile Include="Configuration\ConfigurationUtilities.cs" />
     <Compile Include="Configuration\MessageTypeMessagingEntityMappingDetails.cs" />
-    <Compile Include="Infrastructure\IMessageClientEntityFactory.cs" />
+    <Compile Include="Infrastructure\IMessagingEntityFactory.cs" />
     <Compile Include="Infrastructure\IMessagingEntityVerifier.cs" />
     <Compile Include="Infrastructure\MessagingEntityVerifier.cs" />
     <Compile Include="Infrastructure\PeekLockMessageControl.cs" />
     <Compile Include="PeekLockMessage.cs" />
-    <Compile Include="Infrastructure\MessageClientEntityFactory.cs" />
+    <Compile Include="Infrastructure\MessageEntityFactory.cs" />
     <Compile Include="Configuration\ConfigurationExceptions.cs" />
     <Compile Include="Configuration\Unconfigured.cs" />
     <Compile Include="Infrastructure\IMessageReceiver.cs" />

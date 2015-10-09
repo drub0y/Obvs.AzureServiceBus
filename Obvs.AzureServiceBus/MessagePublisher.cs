@@ -15,18 +15,18 @@ namespace Obvs.AzureServiceBus
     public class MessagePublisher<TMessage> : IMessagePublisher<TMessage>
         where TMessage : class
     {
-        private readonly IMessageClientEntityFactory _messageClientEntityFactory;
+        private readonly IMessagingEntityFactory _messagingEntityFactory;
         private readonly IMessageSerializer _serializer;
         private readonly IMessagePropertyProvider<TMessage> _propertyProvider;
         private readonly ConcurrentDictionary<Type, IMessageSender> _messageTypeMessageSenderMap;
 
-        internal MessagePublisher(IMessageClientEntityFactory messageClientEntityFactory, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider)
+        internal MessagePublisher(IMessagingEntityFactory messagingEntityFactory, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider)
         {
-            if(messageClientEntityFactory == null) throw new ArgumentNullException("messageClientEntityFactory");
+            if(messagingEntityFactory == null) throw new ArgumentNullException("messagingEntityFactory");
             if(serializer == null) throw new ArgumentNullException("serializer");
             if(propertyProvider == null) throw new ArgumentNullException("propertyProvider");
 
-            _messageClientEntityFactory = messageClientEntityFactory;
+            _messagingEntityFactory = messagingEntityFactory;
             _serializer = serializer;
             _propertyProvider = propertyProvider;
             _messageTypeMessageSenderMap = new ConcurrentDictionary<Type, IMessageSender>();
@@ -132,7 +132,7 @@ namespace Obvs.AzureServiceBus
 
         private IMessageSender CreateMessageSenderForMessageType(Type messageType)
         {
-            return _messageClientEntityFactory.CreateMessageSender(messageType);
+            return _messagingEntityFactory.CreateMessageSender(messageType);
         }
 
     }

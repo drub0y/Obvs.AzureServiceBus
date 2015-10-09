@@ -3,7 +3,7 @@ using Obvs.AzureServiceBus.Infrastructure;
 
 namespace Obvs.AzureServiceBus
 {
-    public interface IMessageClientEntityFactory
+    public interface IMessagingEntityFactory
     {
         IMessageReceiver CreateMessageReceiver(Type messageType);
         IMessageSender CreateMessageSender(Type messageType);

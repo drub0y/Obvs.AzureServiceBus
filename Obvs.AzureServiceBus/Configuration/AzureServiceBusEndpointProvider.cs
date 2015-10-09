@@ -25,7 +25,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly IMessageDeserializerFactory _deserializerFactory;
         private readonly Func<Assembly, bool> _assemblyFilter;
         private readonly Func<Type, bool> _typeFilter;
-        private readonly MessageClientEntityFactory _messageClientEntityFactory;
+        private readonly MessagingEntityFactory _messageClientEntityFactory;
         private readonly MessagePropertyProviderManager<TMessage> _messagePropertyProviderManager;
         
         public AzureServiceBusEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypeMessagingEntityMappingDetails> messageTypePathMappings, Func<Assembly, bool> assemblyFilter, Func<Type, bool> typeFilter, MessagePropertyProviderManager<TMessage> messagePropertyProviderManager)
@@ -35,7 +35,7 @@ namespace Obvs.AzureServiceBus.Configuration
             _deserializerFactory = deserializerFactory;
             _assemblyFilter = assemblyFilter;
             _typeFilter = typeFilter;
-            _messageClientEntityFactory = new MessageClientEntityFactory(messagingFactory, messageTypePathMappings);
+            _messageClientEntityFactory = new MessagingEntityFactory(messagingFactory, messageTypePathMappings);
             _messagePropertyProviderManager = messagePropertyProviderManager;
         }
 

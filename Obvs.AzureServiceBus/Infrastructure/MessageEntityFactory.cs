@@ -6,12 +6,12 @@ using Obvs.AzureServiceBus.Infrastructure;
 
 namespace Obvs.AzureServiceBus
 {
-    internal sealed class MessageClientEntityFactory : IMessageClientEntityFactory
+    internal sealed class MessagingEntityFactory : IMessagingEntityFactory
     {
         private readonly IMessagingFactory _messagingFactory;
         private readonly List<MessageTypeMessagingEntityMappingDetails> _messageTypePathMappings;
 
-        public MessageClientEntityFactory(IMessagingFactory messagingFactory, List<MessageTypeMessagingEntityMappingDetails> messageTypePathMappings)
+        public MessagingEntityFactory(IMessagingFactory messagingFactory, List<MessageTypeMessagingEntityMappingDetails> messageTypePathMappings)
         {
             if(messagingFactory == null) throw new ArgumentNullException("messagingFactory");
             if(messageTypePathMappings == null) throw new ArgumentNullException("messageTypePathMappings");
