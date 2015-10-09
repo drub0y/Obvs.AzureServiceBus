@@ -27,23 +27,23 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly Func<Type, bool> _typeFilter;
         private readonly MessageClientEntityFactory _messageClientEntityFactory;
         private readonly MessagePropertyProviderManager<TMessage> _messagePropertyProviderManager;
-
-        public AzureServiceBusEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypePathMappingDetails> messageTypePathMappings, Func<Assembly, bool> assemblyFilter, Func<Type, bool> typeFilter, MessagePropertyProviderManager<TMessage> messagePropertyProviderManager)
+        
+        public AzureServiceBusEndpointProvider(string serviceName, INamespaceManager namespaceManager, IMessagingFactory messagingFactory, IMessageSerializer serializer, IMessageDeserializerFactory deserializerFactory, List<MessageTypeMessagingEntityMappingDetails> messageTypePathMappings, Func<Assembly, bool> assemblyFilter, Func<Type, bool> typeFilter, MessagePropertyProviderManager<TMessage> messagePropertyProviderManager)
             : base(serviceName)
         {
             _serializer = serializer;
             _deserializerFactory = deserializerFactory;
             _assemblyFilter = assemblyFilter;
             _typeFilter = typeFilter;
-            _messageClientEntityFactory = new MessageClientEntityFactory(namespaceManager, messagingFactory, messageTypePathMappings);
+            _messageClientEntityFactory = new MessageClientEntityFactory(messagingFactory, messageTypePathMappings);
             _messagePropertyProviderManager = messagePropertyProviderManager;
         }
 
         public override IServiceEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse> CreateEndpoint()
         {
             return new ServiceEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse>(
-               new MessageSource<TRequest>(_messageClientEntityFactory.CreateMessageReceiver(typeof(TRequest)), _deserializerFactory.Create<TRequest, TServiceMessage>(_assemblyFilter, _typeFilter)),
-               new MessageSource<TCommand>(_messageClientEntityFactory.CreateMessageReceiver(typeof(TCommand)), _deserializerFactory.Create<TCommand, TServiceMessage>(_assemblyFilter, _typeFilter)),
+               new MessageSource<TRequest>(_messageClientEntityFactory, _deserializerFactory.Create<TRequest, TServiceMessage>(_assemblyFilter, _typeFilter)),
+               new MessageSource<TCommand>(_messageClientEntityFactory, _deserializerFactory.Create<TCommand, TServiceMessage>(_assemblyFilter, _typeFilter)),
                new MessagePublisher<TEvent>(_messageClientEntityFactory, _serializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TEvent>()),
                new MessagePublisher<TResponse>(_messageClientEntityFactory, _serializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TResponse>()),
                typeof(TServiceMessage));
@@ -53,8 +53,8 @@ namespace Obvs.AzureServiceBus.Configuration
         public override IServiceEndpointClient<TMessage, TCommand, TEvent, TRequest, TResponse> CreateEndpointClient()
         {
             return new ServiceEndpointClient<TMessage, TCommand, TEvent, TRequest, TResponse>(
-               new MessageSource<TEvent>(_messageClientEntityFactory.CreateMessageReceiver(typeof(TEvent)), _deserializerFactory.Create<TEvent, TServiceMessage>(_assemblyFilter, _typeFilter)),
-               new MessageSource<TResponse>(_messageClientEntityFactory.CreateMessageReceiver(typeof(TResponse)), _deserializerFactory.Create<TResponse, TServiceMessage>(_assemblyFilter, _typeFilter)),
+               new MessageSource<TEvent>(_messageClientEntityFactory, _deserializerFactory.Create<TEvent, TServiceMessage>(_assemblyFilter, _typeFilter)),
+               new MessageSource<TResponse>(_messageClientEntityFactory, _deserializerFactory.Create<TResponse, TServiceMessage>(_assemblyFilter, _typeFilter)),
                new MessagePublisher<TRequest>(_messageClientEntityFactory, _serializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TRequest>()),
                new MessagePublisher<TCommand>(_messageClientEntityFactory, _serializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TCommand>()),
                typeof(TServiceMessage));

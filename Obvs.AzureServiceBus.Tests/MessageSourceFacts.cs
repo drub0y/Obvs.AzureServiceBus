@@ -24,10 +24,10 @@ namespace Obvs.AzureServiceBus.Tests
             {
                 Action action = () =>
                 {
-                    new MessageSource<TestMessage>((IMessageReceiver)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
+                    new MessageSource<TestMessage>((IMessageClientEntityFactory)null, new[] { new Mock<IMessageDeserializer<TestMessage>>().Object });
                 };
 
-                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("messageReceiver");
+                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("messageClientEntityFactory");
             }
 
             [Fact]
@@ -265,8 +265,8 @@ namespace Obvs.AzureServiceBus.Tests
 
                 await messagePeekLockControl.CompleteAsync();
 
-                brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Verify(bmplc => bmplc.CompleteAsync(), Times.Never);
-                brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Verify(bmplc => bmplc.CompleteAsync(), Times.Once);
+                brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Verify(bmplc => bmplc.CompleteAsync(), Times.Never());
+                brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Verify(bmplc => bmplc.CompleteAsync(), Times.Once());
             }
         }
 

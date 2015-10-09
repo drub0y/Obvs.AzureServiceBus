@@ -104,7 +104,7 @@ namespace Obvs.AzureServiceBus.Tests
 
                 await messagePublisher.PublishAsync(message);
 
-                mockMessagePropertyProvider.Verify(mpp => mpp.GetProperties(It.Is<TestMessage>(it => Object.ReferenceEquals(it, message))), Times.Once);
+                mockMessagePropertyProvider.Verify(mpp => mpp.GetProperties(It.Is<TestMessage>(it => Object.ReferenceEquals(it, message))), Times.Once());
 
                 brokeredMessageSent.Should().NotBeNull();
 

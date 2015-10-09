@@ -6,134 +6,29 @@ using Obvs.AzureServiceBus.Infrastructure;
 
 namespace Obvs.AzureServiceBus
 {
-    public enum MessagingEntityType
-    {
-        Queue = 0,
-        Topic = 1,
-        Subscription = 2
-    }
-
-    [Flags]
-    public enum MessagingEntityCreationOptions
-    {
-        None = 0,
-        CreateIfDoesntExist = 1,
-        CreateAsTemporary = 2,
-        RecreateExistingTemporary = 4
-    }
-
-    public class MessageTypePathMappingDetails
-    {
-        private readonly Type _messageType;
-        private readonly string _path;
-        private readonly MessagingEntityType _messagingEntityType;
-        private readonly MessagingEntityCreationOptions _creationOptions;
-        private readonly MessageReceiveMode _receiveMode;
-
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType)
-            : this(messageType, path, messagingEntityType, MessagingEntityCreationOptions.None)
-        {
-        }
-
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions)
-            : this(messageType, path, messagingEntityType, creationOptions, MessageReceiveMode.ReceiveAndDelete)
-        {
-        }
-
-        public MessageTypePathMappingDetails(Type messageType, string path, MessagingEntityType messagingEntityType, MessagingEntityCreationOptions creationOptions, MessageReceiveMode receiveMode)
-        {
-            _messageType = messageType;
-            _path = path;
-            _messagingEntityType = messagingEntityType;
-            _creationOptions = creationOptions;
-            _receiveMode = receiveMode;
-        }
-
-        public Type MessageType
-        {
-            get
-            {
-                return _messageType;
-            }
-        }
-
-        public string Path
-        {
-            get
-            {
-                return _path;
-            }
-        }
-
-        public MessagingEntityType MessagingEntityType
-        {
-            get
-            {
-                return _messagingEntityType;
-            }
-        }
-
-        public MessagingEntityCreationOptions CreationOptions
-        {
-            get
-            {
-                return _creationOptions;
-            }
-        }
-
-        public MessageReceiveMode ReceiveMode
-        {
-            get
-            {
-                return _receiveMode;
-            }
-        }
-
-        public sealed class MessagingEntityTypeAndPathComparer : IEqualityComparer<MessageTypePathMappingDetails>
-        {
-            public bool Equals(MessageTypePathMappingDetails x, MessageTypePathMappingDetails y)
-            {
-                return x.MessagingEntityType == y.MessagingEntityType
-                            &&
-                       StringComparer.OrdinalIgnoreCase.Equals(x, y);
-            }
-
-            public int GetHashCode(MessageTypePathMappingDetails obj)
-            {
-                return obj.MessagingEntityType.GetHashCode() ^ obj.Path.GetHashCode();
-            }
-        }
-    }
-
     internal sealed class MessageClientEntityFactory : IMessageClientEntityFactory
     {
-        private readonly INamespaceManager _namespaceManager;
         private readonly IMessagingFactory _messagingFactory;
-        private readonly List<MessageTypePathMappingDetails> _messageTypePathMappings;
-        private readonly HashSet<MessageTypePathMappingDetails> _verifiedExistingMessagingEntities = new HashSet<MessageTypePathMappingDetails>(new MessageTypePathMappingDetails.MessagingEntityTypeAndPathComparer());
+        private readonly List<MessageTypeMessagingEntityMappingDetails> _messageTypePathMappings;
 
-        public MessageClientEntityFactory(INamespaceManager namespaceManager, IMessagingFactory messagingFactory, List<MessageTypePathMappingDetails> messageTypePathMappings)
+        public MessageClientEntityFactory(IMessagingFactory messagingFactory, List<MessageTypeMessagingEntityMappingDetails> messageTypePathMappings)
         {
-            if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
             if(messagingFactory == null) throw new ArgumentNullException("messagingFactory");
             if(messageTypePathMappings == null) throw new ArgumentNullException("messageTypePathMappings");
             if(messageTypePathMappings.Count == 0) throw new ArgumentException("No message types have been mapped.", "messageTypePathMappings");
 
-            _namespaceManager = namespaceManager;
             _messagingFactory = messagingFactory;
             _messageTypePathMappings = messageTypePathMappings;
         }
 
         public IMessageReceiver CreateMessageReceiver(Type messageType)
         {
-            MessageTypePathMappingDetails mappingDetails = GetMappingDetails(messageType, MessagingEntityType.Queue, MessagingEntityType.Subscription);
+            MessageTypeMessagingEntityMappingDetails mappingDetails = GetMappingDetails(messageType, MessagingEntityType.Queue, MessagingEntityType.Subscription);
 
             IMessageReceiver messageReceiver;
 
             if(mappingDetails != null)
             {
-                EnsureMessagingEntityExists(mappingDetails);
-                
                 messageReceiver = _messagingFactory.CreateMessageReceiver(messageType, mappingDetails.Path, mappingDetails.ReceiveMode);
             }
             else
@@ -148,14 +43,12 @@ namespace Obvs.AzureServiceBus
 
         public IMessageSender CreateMessageSender(Type messageType)
         {
-            MessageTypePathMappingDetails mappingDetails = GetMappingDetails(messageType, MessagingEntityType.Queue, MessagingEntityType.Topic);
+            MessageTypeMessagingEntityMappingDetails mappingDetails = GetMappingDetails(messageType, MessagingEntityType.Queue, MessagingEntityType.Topic);
 
             IMessageSender messageSender;
             
             if(mappingDetails != null)
             {
-                EnsureMessagingEntityExists(mappingDetails);
-                
                 messageSender = _messagingFactory.CreateMessageSender(messageType, mappingDetails.Path);
             }
             else
@@ -167,117 +60,21 @@ namespace Obvs.AzureServiceBus
             return messageSender;
         }
 
-        private void EnsureMessagingEntityExists(MessageTypePathMappingDetails mappingDetails)
+        private MessageTypeMessagingEntityMappingDetails GetMappingDetails(Type messageType, params MessagingEntityType[] expectedEntityTypes)
         {
-            if(!_verifiedExistingMessagingEntities.Contains(mappingDetails))
-            {
-                Func<bool> exists;
-                Action create;
-                Action delete;
-
-                string path = mappingDetails.Path;
-
-                switch(mappingDetails.MessagingEntityType)
-                {
-                    case MessagingEntityType.Queue:
-                        exists = () => _namespaceManager.QueueExists(path);
-                        create = () => _namespaceManager.CreateQueue(path);
-                        delete = () => _namespaceManager.DeleteQueue(path);
-
-                        break;
-
-                    case MessagingEntityType.Topic:
-                        exists = () => _namespaceManager.TopicExists(path);
-                        create = () => _namespaceManager.CreateTopic(path);
-                        delete = () => _namespaceManager.DeleteTopic(path);
-
-                        break;
-
-                    case MessagingEntityType.Subscription:
-                        string[] parts = path.Split('/');
-                        string topicPath = parts[0];
-                        string subscriptionName = parts[2];
-
-                        exists = () => _namespaceManager.SubscriptionExists(topicPath, subscriptionName);
-                        create = () =>
-                            {
-                                MessageTypePathMappingDetails topicMessageTypePathMapping = _messageTypePathMappings.FirstOrDefault(mtpmd => mtpmd.MessagingEntityType == MessagingEntityType.Topic && mtpmd.Path == topicPath);
-
-                                if(topicMessageTypePathMapping == null)
-                                {
-                                    topicMessageTypePathMapping = new MessageTypePathMappingDetails(mappingDetails.MessageType, topicPath, MessagingEntityType.Topic, MessagingEntityCreationOptions.None);
-                                }
-
-                                EnsureMessagingEntityExists(topicMessageTypePathMapping);
-
-                                _namespaceManager.CreateSubscription(topicPath, subscriptionName);
-                            };
-                        delete = () => _namespaceManager.DeleteSubscription(topicPath, subscriptionName);
-
-                        break;
-
-                    default:
-                        throw new NotSupportedException(string.Format("Unsupported messaging entity type, {0}, requested for creation (path {1}).", mappingDetails.MessagingEntityType, mappingDetails.Path));
-                }
-
-                bool alreadyExists = exists();
-
-                if(alreadyExists)
-                {
-                    if((mappingDetails.CreationOptions & MessagingEntityCreationOptions.CreateAsTemporary) != 0)
-                    {
-                        if((mappingDetails.CreationOptions & MessagingEntityCreationOptions.RecreateExistingTemporary) == 0)
-                        {
-                            throw new MessagingEntityAlreadyExistsException(mappingDetails.Path, mappingDetails.MessagingEntityType);
-                        }
-
-                        try
-                        {
-                            delete();
-
-                            alreadyExists = false;
-                        }
-                        catch(UnauthorizedAccessException exception)
-                        {
-                            throw new UnauthorizedAccessException(string.Format("Unable to delete temporary messaging that already exists at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
-                        }
-                    }
-                }
-
-                if(!alreadyExists)
-                {
-                    if((mappingDetails.CreationOptions & MessagingEntityCreationOptions.CreateIfDoesntExist) == 0)
-                    {
-                        throw new MessagingEntityDoesNotAlreadyExistException(mappingDetails.Path, mappingDetails.MessagingEntityType);
-                    }
-
-                    try
-                    {
-                        create();
-                    }
-                    catch (UnauthorizedAccessException exception)
-                    {
-                        throw new UnauthorizedAccessException(string.Format("Unable to create messaging entity at path \"{0}\" due to insufficient access. Make sure the policy being used has 'Manage' permission for the namespace.", mappingDetails.Path), exception);
-                    }
-                }
-
-                _verifiedExistingMessagingEntities.Add(mappingDetails);
-            }
-        }
-
-        private MessageTypePathMappingDetails GetMappingDetails(Type messageType, params MessagingEntityType[] expectedEntityTypes)
-        {
-            IEnumerable<MessageTypePathMappingDetails> messageTypePathMappingDetailsForMessagingEntityTypes = (from mtpm in _messageTypePathMappings
+            // Start by reducing the set to only those that match the messaging entity types we're looking for
+            IEnumerable<MessageTypeMessagingEntityMappingDetails> messageTypePathMappingDetailsForMessagingEntityTypes = (from mtpm in _messageTypePathMappings
                                                                                                                join eet in expectedEntityTypes on mtpm.MessagingEntityType equals eet
                                                                                                                select mtpm);
 
 
-            MessageTypePathMappingDetails resolvedMessageTypePathMappingDetails = null;
+            MessageTypeMessagingEntityMappingDetails resolvedMessageTypePathMappingDetails = null;
 
-            foreach(MessageTypePathMappingDetails messageTypePathMappingDetails in messageTypePathMappingDetailsForMessagingEntityTypes)
+            foreach(MessageTypeMessagingEntityMappingDetails messageTypePathMappingDetails in messageTypePathMappingDetailsForMessagingEntityTypes)
             {
                 Type supportedMessageType = messageTypePathMappingDetails.MessageType;
 
+                // If the type matches exactly, then that's the one we use and we can stop looking for anything else
                 if(supportedMessageType == messageType)
                 {
                     resolvedMessageTypePathMappingDetails = messageTypePathMappingDetails;
@@ -286,13 +83,18 @@ namespace Obvs.AzureServiceBus
                 }
                 else
                 {
+                    // Check if the type of this mapping is assignable from the message type in question
                     if(supportedMessageType.IsAssignableFrom(messageType))
                     {
+                        // If we already found a mapping which might have worked and now we found another, then
+                        // we must fail and report the ambiguity
                         if(resolvedMessageTypePathMappingDetails != null)
                         {
                             throw new AmbiguosMessageTypeMappingException(messageType, expectedEntityTypes);
                         }
 
+                        // Remember this mapping, but we will continue looking to make sure it is the only one
+                        // that works for the specified message type (could be more than one)
                         resolvedMessageTypePathMappingDetails = messageTypePathMappingDetails;
                     }
                 }

@@ -22,8 +22,8 @@ namespace Obvs.AzureServiceBus
         private CancellationTokenSource _messageReceiverBrokeredMessageObservableCancellationTokenSource;
         private IBrokeredMessagePeekLockControlProvider _peekLockControlProvider;
 
-        public MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
-            : this(messageReceiver, deserializers, BrokeredMessagePeekLockControlProvider.Default)
+        public MessageSource(IMessageClientEntityFactory messageClientEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
+            : this(messageClientEntityFactory, deserializers, BrokeredMessagePeekLockControlProvider.Default)
         {            
         }
 
@@ -32,9 +32,11 @@ namespace Obvs.AzureServiceBus
         {            
         }
 
-        internal MessageSource(IMessageReceiver messageReceiver, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
+        internal MessageSource(IMessageClientEntityFactory messageClientEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
         {
-            if(messageReceiver == null) throw new ArgumentNullException("messageReceiver");
+            if(messageClientEntityFactory == null) throw new ArgumentNullException("messageClientEntityFactory");
+
+            IMessageReceiver messageReceiver = messageClientEntityFactory.CreateMessageReceiver(typeof(TMessage));
 
             IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messageReceiver);
 
