@@ -14,7 +14,7 @@ namespace Obvs.AzureServiceBus.Samples
 
         static void Main(string[] args)
         {
-            IServiceBus serviceBus = ServiceBus.Configure()
+            var serviceBus = ServiceBus.Configure()
                 .WithAzureServiceBusEndpoint<SampleMessage>()
                 .Named("Sample Message Bus")
                 .WithConnectionString(Program.GetConnectionString())
@@ -22,10 +22,10 @@ namespace Obvs.AzureServiceBus.Samples
                 .UsingTopicFor<IEvent>(BuildMessagingEntityName("events"), MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                 .UsingSubscriptionFor<IEvent>(BuildMessagingEntityName("events"), "sample-subscription1", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                 .SerializedAsJson()
-                .FilterMessageTypeAssemblies("Obvs.AzureServiceBus.Samples")
+                .FilterMessageTypeAssemblies(assembly => assembly == typeof(Program).Assembly)
                 .AsClientAndServer()
                 .UsingDebugLogging(e => true)
-                .Create();
+                .CreateServiceBus();
 
             IDisposable commandsSubscription = serviceBus.Commands
                 .SubscribeOn(TaskPoolScheduler.Default)
@@ -35,9 +35,9 @@ namespace Obvs.AzureServiceBus.Samples
                     Console.WriteLine("Got command: {0}", c.CommandId);
 
                     await serviceBus.PublishAsync(new SampleEvent
-                        {
-                            EventId = "EVENT:" + c.CommandId,
-                        });
+                    {
+                        EventId = "EVENT:" + c.CommandId,
+                    });
                 });
 
             IDisposable commandSenderSubscription = null;
@@ -48,6 +48,7 @@ namespace Obvs.AzureServiceBus.Samples
             Console.WriteLine("'E' - attach/detach event listener");
 
             bool shouldStop = false;
+            Random random = new Random();
 
             do
             {
@@ -58,7 +59,7 @@ namespace Obvs.AzureServiceBus.Samples
                     case ConsoleKey.C:
                         if(commandSenderSubscription == null)
                         {
-                            commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(250))
+                            commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(random.Next(250, 1000)))
                                 .SubscribeOn(TaskPoolScheduler.Default)
                                 .Subscribe(async l =>
                                 {
@@ -108,7 +109,6 @@ namespace Obvs.AzureServiceBus.Samples
                 }
             } while(!shouldStop);
 
-
             Console.ReadKey(true);
             Console.WriteLine("Shutting down...");
 
@@ -117,19 +117,17 @@ namespace Obvs.AzureServiceBus.Samples
                 commandSenderSubscription.Dispose();
             }
 
-            ((IDisposable)serviceBus).Dispose();
-
-            Console.WriteLine("ServiceBus disposed, should have stopped receiving messages? Hit any key to finish cleaning up subscriptions...");
-            Console.ReadKey(true);
-
-            commandsSubscription.Dispose();
-
             if(eventsSubscription != null)
             {
                 eventsSubscription.Dispose();
             }
 
-            Console.WriteLine("Shut down completed. Hit any key to exit!");
+            commandsSubscription.Dispose();
+
+            ((IDisposable)serviceBus).Dispose();
+
+            Console.WriteLine("All subscriptions and Service Bus disposed, should have stopped receiving messages.");
+            Console.WriteLine("Hit any key to exit!");
             Console.ReadKey(true);
         }
 

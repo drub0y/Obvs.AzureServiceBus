@@ -32,16 +32,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Obvs, Version=1.6.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Obvs.1.6.2\lib\net45\Obvs.dll</HintPath>
+    <Reference Include="Obvs, Version=2.1.0.28, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Obvs.2.1.0.28\lib\net45\Obvs.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Obvs.Serialization.Json, Version=1.6.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Obvs.Serialization.Json.1.6.0\lib\net45\Obvs.Serialization.Json.dll</HintPath>
+    <Reference Include="Obvs.Serialization.Json, Version=2.0.0.12, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Obvs.Serialization.Json.2.0.0.12\lib\net45\Obvs.Serialization.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
