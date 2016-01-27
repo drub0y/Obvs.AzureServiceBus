@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.MessageProperties;
@@ -13,7 +12,7 @@ using Obvs.Serialization;
 
 namespace Obvs.AzureServiceBus
 {
-    public class MessageSource<TMessage> : IMessageSource<TMessage> 
+    public class MessageSource<TMessage> : IMessageSource<TMessage>
         where TMessage : class
     {
         private IObservable<BrokeredMessage> _brokeredMessages;
@@ -21,19 +20,19 @@ namespace Obvs.AzureServiceBus
         private CancellationTokenSource _messageReceiverBrokeredMessageObservableCancellationTokenSource;
         private IBrokeredMessagePeekLockControlProvider _peekLockControlProvider;
 
-        public MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
+        public MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
             : this(messagingEntityFactory, deserializers, BrokeredMessagePeekLockControlProvider.Default)
-        {            
+        {
         }
 
-        public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers) 
+        public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
             : this(brokeredMessages, deserializers, BrokeredMessagePeekLockControlProvider.Default)
-        {            
+        {
         }
 
         internal MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
         {
-            if(messagingEntityFactory == null) throw new ArgumentNullException("messagingEntityFactory");
+            if(messagingEntityFactory == null) throw new ArgumentNullException(nameof(messagingEntityFactory));
 
             IMessageReceiver messageReceiver = messagingEntityFactory.CreateMessageReceiver(typeof(TMessage));
 
@@ -67,10 +66,16 @@ namespace Obvs.AzureServiceBus
 
                                     if(peekLockMessage != null)
                                     {
+                                        // NOTE: in the case of a peek lock message, the peek lock control will take care of disposing the brokered message
                                         peekLockMessage.PeekLockControl = _peekLockControlProvider.ProvidePeekLockControl(messageParts.BrokeredMessage);
                                     }
-                                    
-                                    o.OnNext(messageParts.DeserializedMessage);
+                                    else
+                                    {
+                                        // Dispose of the brokered message immediately as there will be no further use of it
+                                        messageParts.BrokeredMessage.Dispose();
+                                    }
+
+                                    o.OnNext(messageParts.DeserializedMessage);                                    
                                 },
                                 o.OnError,
                                 o.OnCompleted);
@@ -91,7 +96,7 @@ namespace Obvs.AzureServiceBus
         private IObservable<BrokeredMessage> CreateBrokeredMessageObservableFromMessageReceiver(IMessageReceiver messageReceiver)
         {
             _messageReceiverBrokeredMessageObservableCancellationTokenSource = new CancellationTokenSource();
-            
+
             IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(async (observer, cancellationToken) =>
             {
                 while(!messageReceiver.IsClosed
@@ -112,6 +117,9 @@ namespace Obvs.AzureServiceBus
                     catch(Exception exception)
                     {
                         observer.OnError(exception);
+
+                        // NOTE: Rx rules demand you terminate the stream immediately after an OnError call, so break out of the loop to stop processing messages
+                        break;
                     }
                 }
 
@@ -123,9 +131,9 @@ namespace Obvs.AzureServiceBus
 
         private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
         {
-            if(brokeredMessages == null) throw new ArgumentNullException("brokeredMessages");
-            if(deserializers == null) throw new ArgumentNullException("deserializers");
-            if(peekLockControlProvider == null) throw new ArgumentNullException("peekLockControlProvider");
+            if(brokeredMessages == null) throw new ArgumentNullException(nameof(brokeredMessages));
+            if(deserializers == null) throw new ArgumentNullException(nameof(deserializers));
+            if(peekLockControlProvider == null) throw new ArgumentNullException(nameof(peekLockControlProvider));
 
             _brokeredMessages = brokeredMessages;
             _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
@@ -149,7 +157,7 @@ namespace Obvs.AzureServiceBus
         {
             object messageTypeName;
             IMessageDeserializer<TMessage> messageDeserializerForType;
-            
+
             if(message.Properties.TryGetValue(MessagePropertyNames.TypeName, out messageTypeName))
             {
                 messageDeserializerForType = _deserializers[(string)messageTypeName];
@@ -165,20 +173,8 @@ namespace Obvs.AzureServiceBus
                     throw new Exception("The message contained no explicit TypeName property. In this scenario there must be a single deserializer provided.", exception);
                 }
             }
-            
-            TMessage deserializedMessage = messageDeserializerForType.Deserialize(message.GetBody<Stream>());
 
-            return deserializedMessage;
+            return messageDeserializerForType.Deserialize(message.GetBody<Stream>());
         }
-
-        private static void AutoCompleteBrokeredMessage(BrokeredMessage brokeredMessage)
-        {
-            brokeredMessage.CompleteAsync().ContinueWith(completeAntecedent =>
-            {
-                // TODO: figure out how to get an ILogger in here and log failures
-            },
-            TaskContinuationOptions.OnlyOnFaulted);
-        }
-
     }
 }

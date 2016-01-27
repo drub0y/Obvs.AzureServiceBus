@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
-using Obvs.AzureServiceBus.Configuration;
 using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.MessageProperties;
 using Obvs.Serialization;
@@ -50,22 +49,22 @@ namespace Obvs.AzureServiceBus
 
         private async Task PublishAsync(TMessage message, IEnumerable<KeyValuePair<string, object>> properties)
         {
-            using(MemoryStream messageBodyStream = new MemoryStream())
-            {
-                _serializer.Serialize(messageBodyStream, message);
-
-                messageBodyStream.Position = 0;
-
-                BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
-
-                SetSessionAndCorrelationIdentifiersIfApplicable(message, brokeredMessage);
+            // NOTE: we don't dispose of the MemoryStream here because BrokeredMessage assumes ownership of it's lifetime
+            MemoryStream messageBodyStream = new MemoryStream();
             
-                SetProperties(message, properties, brokeredMessage);
+            _serializer.Serialize(messageBodyStream, message);
 
-                IMessageSender messageSenderForMessageType = GetMessageSenderForMessageType(message);
+            messageBodyStream.Position = 0;
 
-                await messageSenderForMessageType.SendAsync(brokeredMessage);
-            }
+            BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
+
+            SetSessionAndCorrelationIdentifiersIfApplicable(message, brokeredMessage);
+            
+            SetProperties(message, properties, brokeredMessage);
+
+            IMessageSender messageSenderForMessageType = GetMessageSenderForMessageType(message);
+
+            await messageSenderForMessageType.SendAsync(brokeredMessage);
         }        
 
         private static void SetProperties(TMessage message, IEnumerable<KeyValuePair<string, object>> properties, BrokeredMessage brokeredMessage)
