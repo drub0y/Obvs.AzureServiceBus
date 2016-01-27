@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
 
 namespace Obvs.AzureServiceBus.Infrastructure
@@ -28,39 +29,51 @@ namespace Obvs.AzureServiceBus.Infrastructure
 
     internal struct BrokeredMessagePeekLockControl : IMessagePeekLockControl
     {
-        private readonly BrokeredMessage _brokeredMessage;
+        private BrokeredMessage _brokeredMessage;
 
         public BrokeredMessagePeekLockControl(BrokeredMessage brokeredMessage)
         {
             _brokeredMessage = brokeredMessage;
         }
 
-        public BrokeredMessage BrokeredMessage
+        public async Task AbandonAsync()
         {
-            get
-            {
-                return _brokeredMessage;
-            }
+            await PerformBrokeredMessageActionAndDisposeAsync(async bm => await bm.AbandonAsync());
         }
 
-        public Task AbandonAsync()
+        public async Task CompleteAsync()
         {
-            return _brokeredMessage.AbandonAsync();
+            await PerformBrokeredMessageActionAndDisposeAsync(async bm => await bm.CompleteAsync());
         }
 
-        public Task CompleteAsync()
+        public async Task RejectAsync(string reasonCode, string description)
         {
-            return _brokeredMessage.CompleteAsync();
-        }
-
-        public Task RejectAsync(string reasonCode, string description)
-        {
-            return _brokeredMessage.DeadLetterAsync(reasonCode, description);
+            await PerformBrokeredMessageActionAndDisposeAsync(async bm => await bm.DeadLetterAsync(reasonCode, description));
         }
 
         public Task RenewLockAsync()
         {
+            this.EnsureBrokeredMessageNotAlreadyProcessed();
+
             return _brokeredMessage.RenewLockAsync();
+        }
+
+        private async Task PerformBrokeredMessageActionAndDisposeAsync(Func<BrokeredMessage, Task> action)
+        {
+            this.EnsureBrokeredMessageNotAlreadyProcessed();
+
+            await action(_brokeredMessage);
+
+            _brokeredMessage.Dispose();
+            _brokeredMessage = null;
+        }
+
+        private void EnsureBrokeredMessageNotAlreadyProcessed()
+        {
+            if(_brokeredMessage == null)
+            {
+                throw new InvalidOperationException("The brokered message has already been abandoned, completed or rejected.");
+            }
         }
     }
 }

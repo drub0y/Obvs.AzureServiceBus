@@ -139,7 +139,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
             _messagingEntityVerifier.EnsureMessagingEntitiesExist(_messageTypePathMappings);
 
-            return new AzureServiceBusEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(_serviceName, _namespaceManager, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyFilter, _typeFilter, _messagePropertyProviderManager);
+            return new AzureServiceBusEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(_serviceName, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyFilter, _typeFilter, _messagePropertyProviderManager);
         }        
 
         public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithConnectionString(string connectionString)
