@@ -11,8 +11,7 @@
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
         <releaseNotes>
-            * Support for non-IMessage message types for PeekLockMessageControlExtensions::GetPeekLockMessageControl
-            * Renamed IMessageClientEntityFactory -> IMessagingEntityFactory
+            * Upgrading to Obvs 3.x
         </releaseNotes>
     </metadata>
 </package>

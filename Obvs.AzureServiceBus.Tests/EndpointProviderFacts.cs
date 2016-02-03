@@ -221,8 +221,11 @@ namespace Obvs.AzureServiceBus.Tests
 
                 _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(It.Is<Type>(it => it == typeof(TestSpecificEvent1)), testSubscriptionPath, It.Is<MessageReceiveMode>(mrm => mrm == MessageReceiveMode.ReceiveAndDelete)), Times.Once());
 
-                // NOTE: two times because the first time will return the msg for the test and then it will call ReceiveAsync again and block
-                mockMessageReceiver.Verify(mr => mr.ReceiveAsync(), Times.Exactly(2));
+                /* NOTE: it's possible ReceiveAsync will be called up to two times due to concurrency here: 
+                 * the first time will return the msg for the test, but then it's possible there will be a second call to ReceiveAsync to wait for the next message 
+                 * before the subscription is shut down.
+                 */
+                mockMessageReceiver.Verify(mr => mr.ReceiveAsync(), Times.AtMost(2));
             }
         }
 
