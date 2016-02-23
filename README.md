@@ -21,7 +21,7 @@ full control you would expect over peek-lock style messages as if you were worki
 
 *Please note:* you must opt-in to `PeekLock` mode as the default is `ReceiveAndDelete`. This is to stay consistent with the Azure Service Bus API itself.
 
-[You can read more on this subject here in the Wiki.](https://github.com/drub0y/Obvs.AzureServiceBus/wiki/Peek-Lock-Message-Processing-Pattern-Support). 
+[You can read more on this subject here in the Wiki.](https://github.com/drub0y/Obvs.AzureServiceBus/wiki/Peek-Lock-Message-Processing-Pattern-Support)
 
 ---   
 
@@ -36,7 +36,7 @@ Shows how to configure the bus to send commands to an Azure Service Bus Queue.
 ```C#
 // Configure the bus with a queue
 var serviceBusClient = ServiceBus<MyMessage, MyCommand, MyEvent, MyRequest, MyResponse>.Configure()
-                .WithAzureServiceBusEndpoint<MyMessage, MyMessage, MyCommand, MyEvent, MyRequest, MyResponse>()
+                .WithAzureServiceBusEndpoint()
                 .Named("My Service Bus")
                 .WithConnectionString(ConfigurationManager.AppSettings["MyServiceBusConnectionString"])
                 .UsingQueueFor<MyCommand>("my-commands")
@@ -52,7 +52,7 @@ await serviceBusClient.SendAsync(new MyFancyCommand());
 ```C#
 // Configure the bus with a topic
 var serviceBus = ServiceBus<MyMessage, MyCommand, MyEvent, MyRequest, MyResponse>.Configure()
-                .WithAzureServiceBusEndpoint<MyMessage, MyMessage, MyCommand, MyEvent, MyRequest, MyResponse>()
+                .WithAzureServiceBusEndpoint()
                 .Named("My Service Bus")
                 .WithConnectionString(ConfigurationManager.AppSettings["MyServiceBusConnectionString"])
                 .UsingTopicFor<MyEvent>("my-events")
@@ -69,7 +69,7 @@ await serviceBus.PublishAsync(new MySpecialEvent());
 ```C#
 // Configure the bus with a specific subscription
 var serviceBusClient = ServiceBus<MyMessage, MyCommand, MyEvent, MyRequest, MyResponse>.Configure()
-                .WithAzureServiceBusEndpoint<MyMessage, MyMessage, MyCommand, MyEvent, MyRequest, MyResponse>()
+                .WithAzureServiceBusEndpoint()
                 .Named("My Service Bus")
                 .WithConnectionString(ConfigurationManager.AppSettings["MyServiceBusConnectionString"])
                 .UsingSubscriptionFor<MyEvent>("my-events", "my-subscription", MessageReceiveMode.PeekLock)
