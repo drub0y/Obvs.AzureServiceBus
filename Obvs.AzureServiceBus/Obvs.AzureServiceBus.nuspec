@@ -11,7 +11,7 @@
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
         <releaseNotes>
-            * FIX: changes to internal Rx stream management of BrokeredMessages inside MessageSource class.
+            * FIX: more changes to internal Rx stream management of BrokeredMessages inside MessageSource class
         </releaseNotes>
     </metadata>
 </package>
