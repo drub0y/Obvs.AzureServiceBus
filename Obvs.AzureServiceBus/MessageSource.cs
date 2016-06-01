@@ -34,9 +34,7 @@ namespace Obvs.AzureServiceBus
         {
             if(messagingEntityFactory == null) throw new ArgumentNullException(nameof(messagingEntityFactory));
 
-            IMessageReceiver messageReceiver = messagingEntityFactory.CreateMessageReceiver(typeof(TMessage));
-
-            IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messageReceiver);
+            IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messagingEntityFactory);
 
             Initialize(brokeredMessages, deserializers, peekLockControlProvider);
         }
@@ -93,17 +91,20 @@ namespace Obvs.AzureServiceBus
             }
         }
 
-        private IObservable<BrokeredMessage> CreateBrokeredMessageObservableFromMessageReceiver(IMessageReceiver messageReceiver)
+        private IObservable<BrokeredMessage> CreateBrokeredMessageObservableFromMessageReceiver(IMessagingEntityFactory messagingEntityFactory)
         {
             _messageReceiverBrokeredMessageObservableCancellationTokenSource = new CancellationTokenSource();
 
-            IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(async (observer, cancellationToken) =>
+            return Observable.Create<BrokeredMessage>(async (observer, cancellationToken) =>
             {
-                while(!messageReceiver.IsClosed
+                IMessageReceiver messageReceiver = messagingEntityFactory.CreateMessageReceiver(typeof(TMessage));
+                Exception messagePumpingException = null;
+
+                while(!cancellationToken.IsCancellationRequested
                             &&
-                       !cancellationToken.IsCancellationRequested
+                       !_messageReceiverBrokeredMessageObservableCancellationTokenSource.IsCancellationRequested
                             &&
-                       !_messageReceiverBrokeredMessageObservableCancellationTokenSource.IsCancellationRequested)
+                       !messageReceiver.IsClosed)
                 {
                     try
                     {
@@ -116,17 +117,25 @@ namespace Obvs.AzureServiceBus
                     }
                     catch(Exception exception)
                     {
-                        observer.OnError(exception);
+                        messagePumpingException = exception;
 
-                        // NOTE: Rx rules demand you terminate the stream immediately after an OnError call, so break out of the loop to stop processing messages
+                        // Once we've encountered an exception we want to break out of the message pumping loop because the Rx stream must be terminated
                         break;
                     }
                 }
 
-                return Disposable.Empty;
-            });
+                // If we encountered an exception during message pumping then terminate the stream with OnError, otherwise signal that the stream has completed with OnCompleted
+                if(messagePumpingException != null)
+                {
+                    observer.OnError(messagePumpingException);
+                }
+                else
+                {
+                    observer.OnCompleted();
+                }                
 
-            return brokeredMessages.Publish().RefCount();
+                return new SingleAssignmentDisposable { Disposable = messageReceiver };
+            }).Publish().RefCount();
         }
 
         private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
