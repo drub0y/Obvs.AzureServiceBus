@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
 using Microsoft.ServiceBus.Messaging;
@@ -34,9 +33,7 @@ namespace Obvs.AzureServiceBus
         {
             if(messagingEntityFactory == null) throw new ArgumentNullException(nameof(messagingEntityFactory));
 
-            IMessageReceiver messageReceiver = messagingEntityFactory.CreateMessageReceiver(typeof(TMessage));
-
-            IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messageReceiver);
+            IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messagingEntityFactory);
 
             Initialize(brokeredMessages, deserializers, peekLockControlProvider);
         }
@@ -50,36 +47,31 @@ namespace Obvs.AzureServiceBus
         {
             get
             {
-                return Observable.Create<TMessage>(o =>
-                    {
-                        return (from bm in _brokeredMessages
-                                where IsCorrectMessageType(bm)
-                                select new
-                                {
-                                    BrokeredMessage = bm,
-                                    DeserializedMessage = Deserialize(bm)
-                                })
-                            .Subscribe(
-                                messageParts =>
-                                {
-                                    PeekLockMessage peekLockMessage = messageParts.DeserializedMessage as PeekLockMessage;
+                return (from bm in _brokeredMessages
+                        where IsCorrectMessageType(bm)
+                        select new
+                        {
+                            BrokeredMessage = bm,
+                            DeserializedMessage = Deserialize(bm)
+                        })
+                        .Select(messageParts =>
+                        {
+                            TMessage deserializedMessage = messageParts.DeserializedMessage;
+                            PeekLockMessage peekLockMessage = messageParts.DeserializedMessage as PeekLockMessage;
 
-                                    if(peekLockMessage != null)
-                                    {
-                                        // NOTE: in the case of a peek lock message, the peek lock control will take care of disposing the brokered message
-                                        peekLockMessage.PeekLockControl = _peekLockControlProvider.ProvidePeekLockControl(messageParts.BrokeredMessage);
-                                    }
-                                    else
-                                    {
-                                        // Dispose of the brokered message immediately as there will be no further use of it
-                                        messageParts.BrokeredMessage.Dispose();
-                                    }
+                            if(peekLockMessage != null)
+                            {
+                                // NOTE: in the case of a peek lock message, the peek lock control will take care of disposing the brokered message
+                                peekLockMessage.PeekLockControl = _peekLockControlProvider.ProvidePeekLockControl(messageParts.BrokeredMessage);
+                            }
+                            else
+                            {
+                                // Dispose of the brokered message immediately as there will be no further use of it
+                                messageParts.BrokeredMessage.Dispose();
+                            }
 
-                                    o.OnNext(messageParts.DeserializedMessage);                                    
-                                },
-                                o.OnError,
-                                o.OnCompleted);
-                    });
+                            return deserializedMessage;
+                        });
             }
         }
 
@@ -93,40 +85,30 @@ namespace Obvs.AzureServiceBus
             }
         }
 
-        private IObservable<BrokeredMessage> CreateBrokeredMessageObservableFromMessageReceiver(IMessageReceiver messageReceiver)
+        private IObservable<BrokeredMessage> CreateBrokeredMessageObservableFromMessageReceiver(IMessagingEntityFactory messagingEntityFactory)
         {
             _messageReceiverBrokeredMessageObservableCancellationTokenSource = new CancellationTokenSource();
 
-            IObservable<BrokeredMessage> brokeredMessages = Observable.Create<BrokeredMessage>(async (observer, cancellationToken) =>
+            return Observable.Create<BrokeredMessage>(async (observer, cancellationToken) =>
             {
-                while(!messageReceiver.IsClosed
+                IMessageReceiver messageReceiver = messagingEntityFactory.CreateMessageReceiver(typeof(TMessage));
+
+                while(!cancellationToken.IsCancellationRequested
                             &&
-                       !cancellationToken.IsCancellationRequested
+                       !_messageReceiverBrokeredMessageObservableCancellationTokenSource.IsCancellationRequested
                             &&
-                       !_messageReceiverBrokeredMessageObservableCancellationTokenSource.IsCancellationRequested)
+                       !messageReceiver.IsClosed)
                 {
-                    try
-                    {
-                        BrokeredMessage nextMessage = await messageReceiver.ReceiveAsync(); // NOTE: could pass CancellationToken in here if ReceiveAsync is ever updated to accept it
+                    BrokeredMessage nextMessage = await messageReceiver.ReceiveAsync(); // NOTE: could pass the CancellationToken in here if ReceiveAsync is ever updated to accept it
 
-                        if(nextMessage != null)
-                        {
-                            observer.OnNext(nextMessage);
-                        }
-                    }
-                    catch(Exception exception)
+                    if(nextMessage != null)
                     {
-                        observer.OnError(exception);
-
-                        // NOTE: Rx rules demand you terminate the stream immediately after an OnError call, so break out of the loop to stop processing messages
-                        break;
+                        observer.OnNext(nextMessage);
                     }
                 }
 
-                return Disposable.Empty;
-            });
-
-            return brokeredMessages.Publish().RefCount();
+                return () => messageReceiver.Dispose();
+            }).Publish().RefCount();
         }
 
         private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)

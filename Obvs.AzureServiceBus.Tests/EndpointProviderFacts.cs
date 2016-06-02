@@ -204,7 +204,7 @@ namespace Obvs.AzureServiceBus.Tests
 
                 var endpointClient = endpointProvider.CreateEndpointClient();
 
-                var publishedEvents = endpointClient.Events.SubscribeOn(TaskPoolScheduler.Default).Publish();
+                var publishedEvents = endpointClient.Events.Replay();
 
                 using(publishedEvents.Connect())
                 {

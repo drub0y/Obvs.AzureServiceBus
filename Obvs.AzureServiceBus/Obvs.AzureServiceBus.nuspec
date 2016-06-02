@@ -11,7 +11,7 @@
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
         <releaseNotes>
-            * Added a simpler overload of the WithAzureServiceBusEndpoint configuration method that assumes TServiceMessage is same as TMessage which allows for simpler configuration
+            * FIX: more changes to internal Rx stream management of BrokeredMessages inside MessageSource class
         </releaseNotes>
     </metadata>
 </package>
