@@ -1,40 +1,72 @@
 ﻿using System;
-using Obvs.AzureServiceBus.Configuration;
-using Obvs.Serialization.Json.Configuration;
-using Obvs.Types;
-using Xunit;
-using System.Reactive;
+using System.Diagnostics;
+using System.IO;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
-using System.IO;
-using Newtonsoft.Json.Linq;
-using System.Diagnostics;
+using Obvs.AzureServiceBus.Configuration;
+using Obvs.Serialization.Json.Configuration;
+using Xunit;
 
 namespace Obvs.AzureServiceBus.Tests
 {
     public class IntegrationTests
     {
         private static readonly string ServiceBusConnectionString = GetServiceBusConnectionString();
-        
+
         [Fact]
-        public async Task Test()
+        public void SendMessageToNonExistentQueue()
         {
-            IServiceBus serviceBus = ServiceBus.Configure()
-                .WithAzureServiceBusEndpoint<TestMessage>()
+            var serviceBus = ServiceBus<TestMessage, TestCommand, TestEvent, TestRequest, TestResponse>.Configure()
+                .WithAzureServiceBusEndpoint()
                 .Named("Test")
                 .WithConnectionString(IntegrationTests.ServiceBusConnectionString)
-                .UsingQueueFor<ICommand>("obvs-test-commands", MessageReceiveMode.ReceiveAndDelete, MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
-                .UsingQueueFor<IRequest>("obvs-test-requests", MessageReceiveMode.ReceiveAndDelete, MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
-                .UsingQueueFor<IResponse>("obvs-test-responses", MessageReceiveMode.ReceiveAndDelete, MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
-                .UsingTopicFor<IEvent>("obvs-test-events", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
-                .UsingSubscriptionFor<IEvent>("obvs-test-events", "obvs-test-subscription", MessageReceiveMode.ReceiveAndDelete, MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
+                .UsingQueueFor<TestCommand>("NON-EXISTENT-QUEUE", MessageReceiveMode.ReceiveAndDelete)
                 .SerializedAsJson()
-                .FilterMessageTypeAssemblies("Obvs.AzureServiceBus.Tests")
+                .FilterMessageTypeAssemblies(a => a.GetName().Name == "Obvs.AzureServiceBus.Tests")
                 .AsClientAndServer()
-                .Create();
+                .CreateServiceBus();
+
+            Func<Task> action = async () => await serviceBus.SendAsync(new TestCommand
+            {
+                Id = "TestId",
+                Data = "TestData"
+            });
+            
+            action.ShouldThrow<Exception>();
+        }
+
+        [Fact]
+        public void RecieveMessagesFromNonExistentQueue()
+        {
+            var serviceBus = ServiceBus<TestMessage, TestCommand, TestEvent, TestRequest, TestResponse>.Configure()
+                .WithAzureServiceBusEndpoint()
+                .Named("Test")
+                .WithConnectionString(IntegrationTests.ServiceBusConnectionString)
+                .UsingQueueFor<TestCommand>("NON-EXISTENT-QUEUE", MessageReceiveMode.ReceiveAndDelete)
+                .SerializedAsJson()
+                .FilterMessageTypeAssemblies(a => a.GetName().Name == "Obvs.AzureServiceBus.Tests")
+                .AsClientAndServer()
+                .CreateServiceBus();
+
+            Func<Task> action = async () => await serviceBus.Commands.FirstOrDefaultAsync();
+
+            action.ShouldThrow<Exception>();
+        }
+
+        [Fact]
+        public async Task SendAndReceiveSingleCommand()
+        {
+            var serviceBus = ServiceBus<TestMessage, TestCommand, TestEvent, TestRequest, TestResponse>.Configure()
+                .WithAzureServiceBusEndpoint()
+                .Named("Test")
+                .WithConnectionString(IntegrationTests.ServiceBusConnectionString)
+                .UsingQueueFor<TestCommand>("obvs-test-commands", MessageReceiveMode.ReceiveAndDelete, MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
+                .SerializedAsJson()
+                .FilterMessageTypeAssemblies(a => a.GetName().Name == "Obvs.AzureServiceBus.Tests")
+                .AsClientAndServer()
+                .CreateServiceBus();
 
             string commandId = Guid.NewGuid().ToString("n");
 
@@ -80,7 +112,7 @@ namespace Obvs.AzureServiceBus.Tests
         }
     }
 
-    public class TestMessage : IMessage
+    public class TestMessage
     {
         public string Id
         {
@@ -89,12 +121,25 @@ namespace Obvs.AzureServiceBus.Tests
         }
     }
 
-    public class TestCommand : TestMessage, ICommand
+    public class TestCommand : TestMessage
     {
         public string Data
         {
             get;
             set;
         }
+    }
+
+    public class TestEvent : TestMessage
+    {
+
+    }
+
+    public class TestRequest : TestMessage
+    {
+    }
+
+    public class TestResponse : TestMessage
+    {
     }
 }
