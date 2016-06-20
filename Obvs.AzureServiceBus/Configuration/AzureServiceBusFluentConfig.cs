@@ -13,8 +13,8 @@ namespace Obvs.AzureServiceBus.Configuration
 {
     public enum MessageReceiveMode
     {
-        PeekLock,
-        ReceiveAndDelete
+        ReceiveAndDelete = 0,
+        PeekLock = 1
     }
 
     public interface ICanAddAzureServiceBusServiceName<TMessage, TCommand, TEvent, TRequest, TResponse>
@@ -202,7 +202,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath) where T : class, TMessage
         {
-            return UsingQueueFor<T>(queuePath, MessageReceiveMode.PeekLock);
+            return UsingQueueFor<T>(queuePath, MessageReceiveMode.ReceiveAndDelete);
         }
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode) where T : class, TMessage
@@ -212,7 +212,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            return UsingQueueFor<T>(queuePath, MessageReceiveMode.PeekLock, creationOptions);
+            return UsingQueueFor<T>(queuePath, MessageReceiveMode.ReceiveAndDelete, creationOptions);
         }
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
@@ -246,7 +246,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            return UsingSubscriptionFor<T>(topicPath, subscriptionName, MessageReceiveMode.PeekLock, creationOptions);
+            return UsingSubscriptionFor<T>(topicPath, subscriptionName, MessageReceiveMode.ReceiveAndDelete, creationOptions);
         }
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
