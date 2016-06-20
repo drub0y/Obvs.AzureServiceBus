@@ -19,7 +19,7 @@ As of Obvs 3.x, the framework offers no out-of-the-box control over peek-lock st
 Therefore this framework offers a small API-subset that is designed to be agnostic of Azure Service Bus at the surface level, yet gives you the 
 full control you would expect over peek-lock style messages as if you were working with Azure Service Bus's `BrokeredMessage` class directly.
 
-*Please note:* you must opt-in to `PeekLock` mode as the default is `ReceiveAndDelete`. This is to stay consistent with the Azure Service Bus API itself.
+**Please note:** you *must* opt-in to `PeekLock` mode as the default is `ReceiveAndDelete`. This is to stay consistent with the Azure Service Bus API itself.
 
 [You can read more on this subject here in the Wiki.](https://github.com/drub0y/Obvs.AzureServiceBus/wiki/Peek-Lock-Message-Processing-Pattern-Support)
 
@@ -83,6 +83,6 @@ serviceBusClient.Events.Subscribe(myEvent =>
     // ... handle the incoming event with whatever domain specific logic here ...
     
     // Signal completion of the peek lock
-    await myEvent.GetPeekLockControl().CompleteAsync();     
+    myEvent.GetPeekLockControl().CompleteAsync().Wait();     
 });
 ```

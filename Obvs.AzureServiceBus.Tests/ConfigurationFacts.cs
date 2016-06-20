@@ -297,6 +297,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .AsClientAndServer();
             }
 
+            [Fact]
             public void ConfigureMultipleProvidersForSameMessageType()
             {
                 Action action = () => ServiceBus.Configure()
@@ -353,6 +354,82 @@ namespace Obvs.AzureServiceBus.Tests
                     .And.Contain(new KeyValuePair<string, object>("SomeThirdProp", "SomeThirdValue"));
             }
         }
+
+        public class EndpointConfigurationFacts : ConfigurationFacts
+        {
+            [Fact]
+            public void DefaultMessageReceiveModeIsReceiveAndDelete()
+            {
+                Mock<IMessageReceiver> mockMessageReceiver = new Mock<IMessageReceiver>();
+                mockMessageReceiver.Setup(mmr => mmr.IsClosed)
+                    .Returns(true);
+
+                _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(typeof(TestCommand), "test", It.IsAny<MessageReceiveMode>()))
+                    .Returns(mockMessageReceiver.Object);
+
+                IServiceBus serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<TestCommand>("test")
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer()
+                    .Create();
+
+                serviceBus.Commands.Subscribe(c => c.ToString());
+
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(typeof(TestCommand), "test", MessageReceiveMode.ReceiveAndDelete));
+            }
+
+            [Fact]
+            public void ExplicitMessageReceiveModeIsSetCorrectly_ReceiveAndDelete()
+            {
+                Mock<IMessageReceiver> mockMessageReceiver = new Mock<IMessageReceiver>();
+                mockMessageReceiver.Setup(mmr => mmr.IsClosed)
+                    .Returns(true);
+
+                _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(typeof(TestCommand), "test", It.IsAny<MessageReceiveMode>()))
+                    .Returns(mockMessageReceiver.Object);
+
+                IServiceBus serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<TestCommand>("test", MessageReceiveMode.ReceiveAndDelete)
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer()
+                    .Create();
+
+                serviceBus.Commands.Subscribe(c => c.ToString());
+
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(typeof(TestCommand), "test", MessageReceiveMode.ReceiveAndDelete));
+            }
+
+            [Fact]
+            public void ExplicitMessageReceiveModeIsSetCorrectly_PeekLock()
+            {
+                Mock<IMessageReceiver> mockMessageReceiver = new Mock<IMessageReceiver>();
+                mockMessageReceiver.Setup(mmr => mmr.IsClosed)
+                    .Returns(true);
+
+                _mockMessagingFactory.Setup(mf => mf.CreateMessageReceiver(typeof(TestCommand), "test", It.IsAny<MessageReceiveMode>()))
+                    .Returns(mockMessageReceiver.Object);
+
+                IServiceBus serviceBus = ServiceBus.Configure()
+                    .WithAzureServiceBusEndpoint<TestMessage>()
+                    .Named("Test Service Bus")
+                    .WithMessagingFactory(_mockMessagingFactory.Object)
+                    .UsingQueueFor<TestCommand>("test", MessageReceiveMode.PeekLock)
+                    .SerializedWith(_mockMessageSerializer.Object, _mockMessageDeserializerFactory.Object)
+                    .AsClientAndServer()
+                    .Create();
+
+                serviceBus.Commands.Subscribe(c => c.ToString());
+
+                _mockMessagingFactory.Verify(mf => mf.CreateMessageReceiver(typeof(TestCommand), "test", MessageReceiveMode.PeekLock));
+            }
+        }
+
 
         public class TestMessage : IMessage
         {

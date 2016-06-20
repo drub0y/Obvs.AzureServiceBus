@@ -11,7 +11,7 @@
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
         <releaseNotes>
-            * FIX: more changes to internal Rx stream management of BrokeredMessages inside MessageSource class
+            * BREAKING FIX: fluent config methods were using PeekLock as the default MessageReceiveMode, now using ReceiveAndDelete per documentation.
         </releaseNotes>
     </metadata>
 </package>
