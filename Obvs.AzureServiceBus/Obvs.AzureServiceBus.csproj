@@ -77,7 +77,6 @@
     <Compile Include="Infrastructure\IMessagingEntityVerifier.cs" />
     <Compile Include="Infrastructure\MessagingEntityVerifier.cs" />
     <Compile Include="Infrastructure\PeekLockMessageControl.cs" />
-    <Compile Include="PeekLockMessage.cs" />
     <Compile Include="Infrastructure\MessageEntityFactory.cs" />
     <Compile Include="Configuration\ConfigurationExceptions.cs" />
     <Compile Include="Configuration\Unconfigured.cs" />
@@ -91,6 +90,7 @@
     <Compile Include="Infrastructure\MessageSenderWrapper.cs" />
     <Compile Include="MessagePublisher.cs" />
     <Compile Include="MessageSource.cs" />
+    <Compile Include="PeekLockControlMessageExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

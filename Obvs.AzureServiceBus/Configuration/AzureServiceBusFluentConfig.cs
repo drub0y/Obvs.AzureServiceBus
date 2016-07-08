@@ -217,7 +217,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            this.AddMessageTypePathMapping(new MessageTypeMessagingEntityMappingDetails(typeof(T), queuePath, MessagingEntityType.Queue, creationOptions, receiveMode));
+            AddMessageTypePathMapping(new MessageTypeMessagingEntityMappingDetails(typeof(T), queuePath, MessagingEntityType.Queue, creationOptions, receiveMode));
             
             return this;
         }
@@ -229,7 +229,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingTopicFor<T>(string topicPath, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            this.AddMessageTypePathMapping(new MessageTypeMessagingEntityMappingDetails(typeof(T), topicPath, MessagingEntityType.Topic, creationOptions));
+            AddMessageTypePathMapping(new MessageTypeMessagingEntityMappingDetails(typeof(T), topicPath, MessagingEntityType.Topic, creationOptions));
 
             return this;
         }
@@ -251,7 +251,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
-            this.AddMessageTypePathMapping(new MessageTypeMessagingEntityMappingDetails(typeof(T), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions, receiveMode));
+            AddMessageTypePathMapping(new MessageTypeMessagingEntityMappingDetails(typeof(T), topicPath + "/subscriptions/" + subscriptionName, MessagingEntityType.Subscription, creationOptions, receiveMode));
 
             return this;
         }

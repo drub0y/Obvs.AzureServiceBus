@@ -1,9 +1,22 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
 
 namespace Obvs.AzureServiceBus.Infrastructure
 {
+    public static class MessagePeekLockControlProvider
+    {
+        public static IMessagePeekLockControlProvider Default;
+
+        internal static void SetDefaultInstance(IMessagePeekLockControlProvider defaultBrokeredMessagePeekLockControlProvider)
+        {
+            if(defaultBrokeredMessagePeekLockControlProvider == null) throw new ArgumentNullException(nameof(defaultBrokeredMessagePeekLockControlProvider));
+
+            MessagePeekLockControlProvider.Default = defaultBrokeredMessagePeekLockControlProvider;
+        }
+    }
+
     public interface IMessagePeekLockControl
     {
         Task AbandonAsync();
@@ -12,27 +25,50 @@ namespace Obvs.AzureServiceBus.Infrastructure
         Task RenewLockAsync();
     }
 
-    internal interface IBrokeredMessagePeekLockControlProvider
+    public interface IMessagePeekLockControlProvider
     {
-        IMessagePeekLockControl ProvidePeekLockControl(BrokeredMessage brokeredMessage);
+        IMessagePeekLockControl GetMessagePeekLockControl<TMessage>(TMessage message);
     }
 
-    internal class BrokeredMessagePeekLockControlProvider : IBrokeredMessagePeekLockControlProvider
+    internal interface IBrokeredMessagePeekLockControlProvider : IMessagePeekLockControlProvider
     {
-        public static readonly BrokeredMessagePeekLockControlProvider Default = new BrokeredMessagePeekLockControlProvider();
+        void ProvidePeekLockControl<TMessage>(TMessage message, BrokeredMessage brokeredMessage);
+    }
 
-        public IMessagePeekLockControl ProvidePeekLockControl(BrokeredMessage brokeredMessage)
+    internal sealed class DefaultBrokeredMessagePeekLockControlProvider : IBrokeredMessagePeekLockControlProvider
+    {
+        private ConditionalWeakTable<object, IMessagePeekLockControl> _trackedMessagePeekLockControlTable = new ConditionalWeakTable<object, IMessagePeekLockControl>();
+
+        public void ProvidePeekLockControl<TMessage>(TMessage message, BrokeredMessage brokeredMessage)
         {
-            return new BrokeredMessagePeekLockControl(brokeredMessage);
+            _trackedMessagePeekLockControlTable.Add(message, new BrokeredMessagePeekLockControl(this, message, brokeredMessage));
+        }
+
+        public IMessagePeekLockControl GetMessagePeekLockControl<TMessage>(TMessage message)
+        {
+            IMessagePeekLockControl result;
+
+            _trackedMessagePeekLockControlTable.TryGetValue(message, out result);
+
+            return result;
+        }
+
+        internal void NotifyMessageCompletion(object message)
+        {
+            _trackedMessagePeekLockControlTable.Remove(message);
         }
     }
 
-    internal struct BrokeredMessagePeekLockControl : IMessagePeekLockControl
+    internal sealed class BrokeredMessagePeekLockControl : IMessagePeekLockControl
     {
+        private DefaultBrokeredMessagePeekLockControlProvider _provider;
+        private object _message;
         private BrokeredMessage _brokeredMessage;
 
-        public BrokeredMessagePeekLockControl(BrokeredMessage brokeredMessage)
+        public BrokeredMessagePeekLockControl(DefaultBrokeredMessagePeekLockControlProvider provider, object message, BrokeredMessage brokeredMessage)
         {
+            _provider = provider;
+            _message = message;
             _brokeredMessage = brokeredMessage;
         }
 
@@ -53,16 +89,18 @@ namespace Obvs.AzureServiceBus.Infrastructure
 
         public Task RenewLockAsync()
         {
-            this.EnsureBrokeredMessageNotAlreadyProcessed();
+            EnsureBrokeredMessageNotAlreadyProcessed();
 
             return _brokeredMessage.RenewLockAsync();
         }
 
         private async Task PerformBrokeredMessageActionAndDisposeAsync(Func<BrokeredMessage, Task> action)
         {
-            this.EnsureBrokeredMessageNotAlreadyProcessed();
+            EnsureBrokeredMessageNotAlreadyProcessed();
 
             await action(_brokeredMessage);
+
+            _provider.NotifyMessageCompletion(_message);
 
             _brokeredMessage.Dispose();
             _brokeredMessage = null;
@@ -70,7 +108,7 @@ namespace Obvs.AzureServiceBus.Infrastructure
 
         private void EnsureBrokeredMessageNotAlreadyProcessed()
         {
-            if(_brokeredMessage == null)
+            if(_message == null)
             {
                 throw new InvalidOperationException("The brokered message has already been abandoned, completed or rejected.");
             }
