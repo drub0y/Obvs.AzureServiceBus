@@ -6,6 +6,8 @@ using Obvs.Types;
 
 namespace Obvs.AzureServiceBus
 {
+    [DataContract]
+    [Serializable]
     public abstract class PeekLockMessage : IMessage
     {
         [NonSerialized]
@@ -30,7 +32,7 @@ namespace Obvs.AzureServiceBus
                 }
 
 #endif
-                
+
                 _messagePeekLockControl = value;
             }
         }
