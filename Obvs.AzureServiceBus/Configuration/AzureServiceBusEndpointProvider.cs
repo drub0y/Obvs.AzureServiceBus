@@ -23,7 +23,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly Func<Assembly, bool> _assemblyFilter;
         private readonly Func<Type, bool> _typeFilter;
         private readonly List<MessageTypeMessagingEntityMappingDetails> _messageTypePathMappings;
-        private readonly MessagingEntityFactory _messageClientEntityFactory;
+        private readonly MessagingEntityFactory _messagingEntityFactory;
         private readonly MessagePropertyProviderManager<TMessage> _messagePropertyProviderManager;
 
         public AzureServiceBusEndpointProvider(string serviceName, IMessagingFactory messagingFactory, IMessageSerializer messageSerializer, IMessageDeserializerFactory messageDeserializerFactory, List<MessageTypeMessagingEntityMappingDetails> messageTypePathMappings, Func<Assembly, bool> assemblyFilter, Func<Type, bool> typeFilter, MessagePropertyProviderManager<TMessage> messagePropertyProviderManager)
@@ -43,7 +43,7 @@ namespace Obvs.AzureServiceBus.Configuration
             _messageTypePathMappings = messageTypePathMappings;
             _messagePropertyProviderManager = messagePropertyProviderManager;
 
-            _messageClientEntityFactory = new MessagingEntityFactory(messagingFactory, messageTypePathMappings);
+            _messagingEntityFactory = new MessagingEntityFactory(messagingFactory, messageTypePathMappings);
         }
 
         public override IServiceEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse> CreateEndpoint()
@@ -51,8 +51,8 @@ namespace Obvs.AzureServiceBus.Configuration
             return new ServiceEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse>(
                GetMessageSource<TRequest>(),
                GetMessageSource<TCommand>(),
-               new MessagePublisher<TEvent>(_messageClientEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TEvent>()),
-               new MessagePublisher<TResponse>(_messageClientEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TResponse>()),
+               new MessagePublisher<TEvent>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TEvent>()),
+               new MessagePublisher<TResponse>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TResponse>()),
                typeof(TServiceMessage));
         }
 
@@ -63,8 +63,8 @@ namespace Obvs.AzureServiceBus.Configuration
             return new ServiceEndpointClient<TMessage, TCommand, TEvent, TRequest, TResponse>(
                GetMessageSource<TEvent>(),
                GetMessageSource<TResponse>(),
-               new MessagePublisher<TRequest>(_messageClientEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TRequest>()),
-               new MessagePublisher<TCommand>(_messageClientEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TCommand>()),
+               new MessagePublisher<TRequest>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TRequest>()),
+               new MessagePublisher<TCommand>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TCommand>()),
                typeof(TServiceMessage));
         }
 
@@ -84,29 +84,56 @@ namespace Obvs.AzureServiceBus.Configuration
             // If there's only one target path mapping for this message type then just return a single MessageSource<T> instance (avoid overhead of MergedMessageSource)
             if(sourceMessageTypePathMappings.Count() == 1)
             {
-                result = CreateMessageSource<TSourceMessage>(sourceMessageTypePathMappings.First().MessageType);
+                result = CreateMessageSource<TSourceMessage>(sourceMessageTypePathMappings.First());
             }
             else
             {
-                result = new MergedMessageSource<TSourceMessage>(sourceMessageTypePathMappings.Select(mtpm => CreateMessageSource<TSourceMessage>(mtpm.MessageType)));
+                result = new MergedMessageSource<TSourceMessage>(sourceMessageTypePathMappings.Select(mtpm => CreateMessageSource<TSourceMessage>(mtpm)));
             }
 
             return result;
         }
 
-        private IMessageSource<TSourceMessage> CreateMessageSource<TSourceMessage>(Type messageType) where TSourceMessage : class, TMessage
+        private static IBrokeredMessagePeekLockControlProvider GetPeekLockControlProvider()
         {
+            IMessagePeekLockControlProvider configuredMessagePeekLockControlProvider = MessagePeekLockControlProvider.Default;
+            IBrokeredMessagePeekLockControlProvider result = configuredMessagePeekLockControlProvider as IBrokeredMessagePeekLockControlProvider;
+
+            if(result == null)
+            {
+                // If there's an already configured provider, but it's not a brokered message based provider then throw
+                if(configuredMessagePeekLockControlProvider != null)
+                {
+                    throw new InvalidOperationException($"The currently configured {nameof(IMessagePeekLockControlProvider)} is not compatible with this provider.");
+
+                }
+
+                // No provider is configured, so configure the default BrokeredMessagePeekLockControlProvider now
+                result = new DefaultBrokeredMessagePeekLockControlProvider();
+
+                MessagePeekLockControlProvider.SetDefaultInstance(result);
+            }
+
+            return result;
+        }
+
+        private IMessageSource<TSourceMessage> CreateMessageSource<TSourceMessage>(MessageTypeMessagingEntityMappingDetails messageTypeMessageingEntityMappingDetails) where TSourceMessage : class, TMessage
+        {
+            Type messageType = messageTypeMessageingEntityMappingDetails.MessageType;
             Type messageSourceType = typeof(MessageSource<>).MakeGenericType(messageType);
             Type messageSourceDeserializerType = typeof(IMessageDeserializer<>).MakeGenericType(messageType);
 
+            IBrokeredMessagePeekLockControlProvider brokeredMessagePeekLockControlProvider = messageTypeMessageingEntityMappingDetails.ReceiveMode == MessageReceiveMode.PeekLock ? GetPeekLockControlProvider() : null;
+
             return Expression.Lambda<Func<IMessageSource<TSourceMessage>>>(
-                    Expression.New(messageSourceType.GetConstructor(new Type[] { typeof(IMessagingEntityFactory), typeof(IEnumerable<>).MakeGenericType(messageSourceDeserializerType) }),
-                Expression.Constant(_messageClientEntityFactory),
+                    Expression.New(messageSourceType.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, Type.DefaultBinder, new Type[] { typeof(IMessagingEntityFactory), typeof(IEnumerable<>).MakeGenericType(messageSourceDeserializerType), typeof(IBrokeredMessagePeekLockControlProvider) }, null),
+                Expression.Constant(_messagingEntityFactory),
                 Expression.Call(
                     Expression.Constant(_messageDeserializerFactory),
                     typeof(IMessageDeserializerFactory).GetMethod("Create").MakeGenericMethod(messageType, typeof(TServiceMessage)),
                     Expression.Constant(_assemblyFilter, typeof(Func<Assembly, bool>)),
-                    Expression.Constant(_typeFilter, typeof(Func<Type, bool>))))).Compile().Invoke();
+                    Expression.Constant(_typeFilter, typeof(Func<Type, bool>))),
+                Expression.Constant(brokeredMessagePeekLockControlProvider, typeof(IBrokeredMessagePeekLockControlProvider)))).Compile().Invoke();
         }
     }
 }

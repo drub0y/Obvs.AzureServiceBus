@@ -53,14 +53,12 @@ namespace Obvs.AzureServiceBus.Tests
             }
 
             [Fact]
-            public void CreatingWithNullPeekLockControlProviderThrows()
+            public void CreatingWithNullPeekLockControlProviderSucceeds()
             {
-                Action action = () =>
-                {
-                    new MessageSource<TestMessage>(new Mock<IObservable<BrokeredMessage>>().Object, new[] { Mock.Of<IMessageDeserializer<TestMessage>>() }, null);
-                };
+                Mock<IMessageDeserializer<TestMessage>> mockMessageDeserializer = new Mock<IMessageDeserializer<TestMessage>>();
+                mockMessageDeserializer.Setup(md => md.GetTypeName()).Returns(nameof(TestMessage));
 
-                action.ShouldThrow<ArgumentNullException>().And.ParamName.Should().Be("peekLockControlProvider");
+                new MessageSource<TestMessage>(new Mock<IObservable<BrokeredMessage>>().Object, new[] { mockMessageDeserializer.Object }, null);
             }
         }
 
@@ -249,11 +247,16 @@ namespace Obvs.AzureServiceBus.Tests
                 Mock<IMessagePeekLockControl> brokeredMessagePeekLockControlForMessageThatShouldBeReceived = new Mock<IMessagePeekLockControl>();
 
                 Mock<IBrokeredMessagePeekLockControlProvider> mockPeekLockControlProvider = new Mock<IBrokeredMessagePeekLockControlProvider>();
-                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(brokeredMessageThatShouldBeIgnored))
+
+                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(testPeekLockMessage, brokeredMessageThatShouldBeIgnored));
+                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.GetMessagePeekLockControl(testPeekLockMessage))
                     .Returns(brokeredMessagePeekLockControlForMessageThatShouldBeIgnored.Object);
 
-                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(brokeredMessageThatShouldBeReceived))
+                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.ProvidePeekLockControl(testPeekLockMessage, brokeredMessageThatShouldBeReceived));
+                mockPeekLockControlProvider.Setup(bmplcp => bmplcp.GetMessagePeekLockControl(testPeekLockMessage))
                     .Returns(brokeredMessagePeekLockControlForMessageThatShouldBeReceived.Object);
+
+                MessagePeekLockControlProvider.SetDefaultInstance(mockPeekLockControlProvider.Object);
 
                 MessageSource<TestPeekLockMessage> messageSource = new MessageSource<TestPeekLockMessage>(brokeredMessages, new[] { mockTestPeekLockMessageDeserializer.Object }, mockPeekLockControlProvider.Object);
 
@@ -279,7 +282,7 @@ namespace Obvs.AzureServiceBus.Tests
             }
         }
 
-        public class TestPeekLockMessage : PeekLockMessage
+        public class TestPeekLockMessage
         {
             public int TestId
             {

@@ -20,12 +20,12 @@ namespace Obvs.AzureServiceBus
         private IBrokeredMessagePeekLockControlProvider _peekLockControlProvider;
 
         public MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
-            : this(messagingEntityFactory, deserializers, BrokeredMessagePeekLockControlProvider.Default)
+            : this(messagingEntityFactory, deserializers, null)
         {
         }
 
         public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
-            : this(brokeredMessages, deserializers, BrokeredMessagePeekLockControlProvider.Default)
+            : this(brokeredMessages, deserializers, null)
         {
         }
 
@@ -57,12 +57,12 @@ namespace Obvs.AzureServiceBus
                         .Select(messageParts =>
                         {
                             TMessage deserializedMessage = messageParts.DeserializedMessage;
-                            PeekLockMessage peekLockMessage = messageParts.DeserializedMessage as PeekLockMessage;
 
-                            if(peekLockMessage != null)
+
+                            if(_peekLockControlProvider != null)
                             {
                                 // NOTE: in the case of a peek lock message, the peek lock control will take care of disposing the brokered message
-                                peekLockMessage.PeekLockControl = _peekLockControlProvider.ProvidePeekLockControl(messageParts.BrokeredMessage);
+                                _peekLockControlProvider.ProvidePeekLockControl(messageParts.DeserializedMessage, messageParts.BrokeredMessage);
                             }
                             else
                             {
@@ -115,7 +115,6 @@ namespace Obvs.AzureServiceBus
         {
             if(brokeredMessages == null) throw new ArgumentNullException(nameof(brokeredMessages));
             if(deserializers == null) throw new ArgumentNullException(nameof(deserializers));
-            if(peekLockControlProvider == null) throw new ArgumentNullException(nameof(peekLockControlProvider));
 
             _brokeredMessages = brokeredMessages;
             _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
