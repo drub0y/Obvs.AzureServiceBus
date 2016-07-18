@@ -31,20 +31,16 @@ namespace Obvs.AzureServiceBus.Infrastructure
             _messageBrokeredMessageTable = messageBrokeredMessageTable;
         }
 
-        public IMessagePeekLockControl GetMessagePeekLockControl<TMessage>(TMessage message) => new DefaultBrokeredMessagePeekLockControl(message, _messageBrokeredMessageTable.GetBrokeredMessageForMessage(message), _messageBrokeredMessageTable.RemoveBrokeredMessageForMessage);
+        public IMessagePeekLockControl GetMessagePeekLockControl<TMessage>(TMessage message) => new DefaultBrokeredMessagePeekLockControl(_messageBrokeredMessageTable.GetBrokeredMessageForMessage(message));
     }
 
     internal struct DefaultBrokeredMessagePeekLockControl : IMessagePeekLockControl
     {
-        private object _message;
         private BrokeredMessage _brokeredMessage;
-        private Action<object> _removeMessageTrackingCallback;
 
-        public DefaultBrokeredMessagePeekLockControl(object message, BrokeredMessage brokeredMessage, Action<object> removeMessageTrackingCallback)
+        public DefaultBrokeredMessagePeekLockControl(BrokeredMessage brokeredMessage)
         {
-            _message = message;
             _brokeredMessage = brokeredMessage;
-            _removeMessageTrackingCallback = removeMessageTrackingCallback;
         }
 
         public async Task AbandonAsync()
@@ -77,14 +73,11 @@ namespace Obvs.AzureServiceBus.Infrastructure
 
             _brokeredMessage.Dispose();
             _brokeredMessage = null;
-
-            _removeMessageTrackingCallback(_message);
-            _message = null;
         }
 
         private void EnsureBrokeredMessageNotAlreadyProcessed()
         {
-            if(_message == null)
+            if(_brokeredMessage == null)
             {
                 throw new InvalidOperationException("The message has already been abandoned, completed or rejected.");
             }
