@@ -76,6 +76,7 @@
     <Compile Include="Infrastructure\IMessageBrokeredMessageTable.cs" />
     <Compile Include="Infrastructure\IMessagingEntityFactory.cs" />
     <Compile Include="Infrastructure\IMessagingEntityVerifier.cs" />
+    <Compile Include="Infrastructure\MessagePropertiesProvider.cs" />
     <Compile Include="Infrastructure\MessagingEntityVerifier.cs" />
     <Compile Include="Infrastructure\PeekLockMessageControl.cs" />
     <Compile Include="Infrastructure\MessageEntityFactory.cs" />
@@ -89,6 +90,7 @@
     <Compile Include="Infrastructure\INamespaceManager.cs" />
     <Compile Include="Infrastructure\IMessageSender.cs" />
     <Compile Include="Infrastructure\MessageSenderWrapper.cs" />
+    <Compile Include="MessagePropertiesMessageExtensions.cs" />
     <Compile Include="MessagePublisher.cs" />
     <Compile Include="MessageSource.cs" />
     <Compile Include="PeekLockControlMessageExtensions.cs" />
