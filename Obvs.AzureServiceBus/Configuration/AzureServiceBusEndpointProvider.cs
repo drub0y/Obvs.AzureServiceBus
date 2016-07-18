@@ -94,46 +94,21 @@ namespace Obvs.AzureServiceBus.Configuration
             return result;
         }
 
-        private static IBrokeredMessagePeekLockControlProvider GetPeekLockControlProvider()
-        {
-            IMessagePeekLockControlProvider configuredMessagePeekLockControlProvider = MessagePeekLockControlProvider.Default;
-            IBrokeredMessagePeekLockControlProvider result = configuredMessagePeekLockControlProvider as IBrokeredMessagePeekLockControlProvider;
-
-            if(result == null)
-            {
-                // If there's an already configured provider, but it's not a brokered message based provider then throw
-                if(configuredMessagePeekLockControlProvider != null)
-                {
-                    throw new InvalidOperationException($"The currently configured {nameof(IMessagePeekLockControlProvider)} is not compatible with this provider.");
-
-                }
-
-                // No provider is configured, so configure the default BrokeredMessagePeekLockControlProvider now
-                result = new DefaultBrokeredMessagePeekLockControlProvider();
-
-                MessagePeekLockControlProvider.SetDefaultInstance(result);
-            }
-
-            return result;
-        }
-
         private IMessageSource<TSourceMessage> CreateMessageSource<TSourceMessage>(MessageTypeMessagingEntityMappingDetails messageTypeMessageingEntityMappingDetails) where TSourceMessage : class, TMessage
         {
             Type messageType = messageTypeMessageingEntityMappingDetails.MessageType;
             Type messageSourceType = typeof(MessageSource<>).MakeGenericType(messageType);
             Type messageSourceDeserializerType = typeof(IMessageDeserializer<>).MakeGenericType(messageType);
 
-            IBrokeredMessagePeekLockControlProvider brokeredMessagePeekLockControlProvider = messageTypeMessageingEntityMappingDetails.ReceiveMode == MessageReceiveMode.PeekLock ? GetPeekLockControlProvider() : null;
-
             return Expression.Lambda<Func<IMessageSource<TSourceMessage>>>(
-                    Expression.New(messageSourceType.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, Type.DefaultBinder, new Type[] { typeof(IMessagingEntityFactory), typeof(IEnumerable<>).MakeGenericType(messageSourceDeserializerType), typeof(IBrokeredMessagePeekLockControlProvider) }, null),
+                    Expression.New(messageSourceType.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, Type.DefaultBinder, new Type[] { typeof(IMessagingEntityFactory), typeof(IEnumerable<>).MakeGenericType(messageSourceDeserializerType), typeof(IMessageBrokeredMessageTable) }, null),
                 Expression.Constant(_messagingEntityFactory),
                 Expression.Call(
                     Expression.Constant(_messageDeserializerFactory),
                     typeof(IMessageDeserializerFactory).GetMethod("Create").MakeGenericMethod(messageType, typeof(TServiceMessage)),
                     Expression.Constant(_assemblyFilter, typeof(Func<Assembly, bool>)),
                     Expression.Constant(_typeFilter, typeof(Func<Type, bool>))),
-                Expression.Constant(brokeredMessagePeekLockControlProvider, typeof(IBrokeredMessagePeekLockControlProvider)))).Compile().Invoke();
+                Expression.Constant(MessageBrokeredMessageTable.Default, typeof(IMessageBrokeredMessageTable)))).Compile().Invoke();
         }
     }
 }

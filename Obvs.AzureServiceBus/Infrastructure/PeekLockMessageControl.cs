@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
 
@@ -8,13 +7,6 @@ namespace Obvs.AzureServiceBus.Infrastructure
     public static class MessagePeekLockControlProvider
     {
         public static IMessagePeekLockControlProvider Default;
-
-        internal static void SetDefaultInstance(IMessagePeekLockControlProvider defaultBrokeredMessagePeekLockControlProvider)
-        {
-            if(defaultBrokeredMessagePeekLockControlProvider == null) throw new ArgumentNullException(nameof(defaultBrokeredMessagePeekLockControlProvider));
-
-            MessagePeekLockControlProvider.Default = defaultBrokeredMessagePeekLockControlProvider;
-        }
     }
 
     public interface IMessagePeekLockControl
@@ -30,46 +22,29 @@ namespace Obvs.AzureServiceBus.Infrastructure
         IMessagePeekLockControl GetMessagePeekLockControl<TMessage>(TMessage message);
     }
 
-    internal interface IBrokeredMessagePeekLockControlProvider : IMessagePeekLockControlProvider
+    internal sealed class DefaultBrokeredMessagePeekLockControlProvider : IMessagePeekLockControlProvider
     {
-        void ProvidePeekLockControl<TMessage>(TMessage message, BrokeredMessage brokeredMessage);
+        private IMessageBrokeredMessageTable _messageBrokeredMessageTable;
+
+        public DefaultBrokeredMessagePeekLockControlProvider(IMessageBrokeredMessageTable messageBrokeredMessageTable)
+        {
+            _messageBrokeredMessageTable = messageBrokeredMessageTable;
+        }
+
+        public IMessagePeekLockControl GetMessagePeekLockControl<TMessage>(TMessage message) => new DefaultBrokeredMessagePeekLockControl(message, _messageBrokeredMessageTable.GetBrokeredMessageForMessage(message), _messageBrokeredMessageTable.RemoveBrokeredMessageForMessage);
     }
 
-    internal sealed class DefaultBrokeredMessagePeekLockControlProvider : IBrokeredMessagePeekLockControlProvider
+    internal struct DefaultBrokeredMessagePeekLockControl : IMessagePeekLockControl
     {
-        private ConditionalWeakTable<object, IMessagePeekLockControl> _trackedMessagePeekLockControlTable = new ConditionalWeakTable<object, IMessagePeekLockControl>();
-
-        public void ProvidePeekLockControl<TMessage>(TMessage message, BrokeredMessage brokeredMessage)
-        {
-            _trackedMessagePeekLockControlTable.Add(message, new BrokeredMessagePeekLockControl(this, message, brokeredMessage));
-        }
-
-        public IMessagePeekLockControl GetMessagePeekLockControl<TMessage>(TMessage message)
-        {
-            IMessagePeekLockControl result;
-
-            _trackedMessagePeekLockControlTable.TryGetValue(message, out result);
-
-            return result;
-        }
-
-        internal void NotifyMessageCompletion(object message)
-        {
-            _trackedMessagePeekLockControlTable.Remove(message);
-        }
-    }
-
-    internal sealed class BrokeredMessagePeekLockControl : IMessagePeekLockControl
-    {
-        private DefaultBrokeredMessagePeekLockControlProvider _provider;
         private object _message;
         private BrokeredMessage _brokeredMessage;
+        private Action<object> _removeMessageTrackingCallback;
 
-        public BrokeredMessagePeekLockControl(DefaultBrokeredMessagePeekLockControlProvider provider, object message, BrokeredMessage brokeredMessage)
+        public DefaultBrokeredMessagePeekLockControl(object message, BrokeredMessage brokeredMessage, Action<object> removeMessageTrackingCallback)
         {
-            _provider = provider;
             _message = message;
             _brokeredMessage = brokeredMessage;
+            _removeMessageTrackingCallback = removeMessageTrackingCallback;
         }
 
         public async Task AbandonAsync()
@@ -100,17 +75,18 @@ namespace Obvs.AzureServiceBus.Infrastructure
 
             await action(_brokeredMessage);
 
-            _provider.NotifyMessageCompletion(_message);
-
             _brokeredMessage.Dispose();
             _brokeredMessage = null;
+
+            _removeMessageTrackingCallback(_message);
+            _message = null;
         }
 
         private void EnsureBrokeredMessageNotAlreadyProcessed()
         {
             if(_message == null)
             {
-                throw new InvalidOperationException("The brokered message has already been abandoned, completed or rejected.");
+                throw new InvalidOperationException("The message has already been abandoned, completed or rejected.");
             }
         }
     }

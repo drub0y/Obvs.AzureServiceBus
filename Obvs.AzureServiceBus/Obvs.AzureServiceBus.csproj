@@ -73,6 +73,7 @@
     <Compile Include="Configuration\AzureServiceBusFluentConfig.cs" />
     <Compile Include="Configuration\ConfigurationUtilities.cs" />
     <Compile Include="Configuration\MessageTypeMessagingEntityMappingDetails.cs" />
+    <Compile Include="Infrastructure\IMessageBrokeredMessageTable.cs" />
     <Compile Include="Infrastructure\IMessagingEntityFactory.cs" />
     <Compile Include="Infrastructure\IMessagingEntityVerifier.cs" />
     <Compile Include="Infrastructure\MessagingEntityVerifier.cs" />

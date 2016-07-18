@@ -1,24 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using FluentAssertions;
+using Moq;
+using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.Types;
 using Xunit;
-using FluentAssertions;
-using Obvs.AzureServiceBus;
-using Moq;
 
 namespace Obvs.AzureServiceBus.Tests
 {
     public class PeekLockMessageControlFacts
     {
-        public class GetPeekLockControl
+        public PeekLockMessageControlFacts()
+        {
+            Mock<IMessagePeekLockControlProvider> mockMessagePeekLockControlProvider = new Mock<IMessagePeekLockControlProvider>();
+            mockMessagePeekLockControlProvider.Setup(mplcp => mplcp.GetMessagePeekLockControl<TestMessage>(It.IsAny<TestMessage>()))
+                .Returns(Mock.Of<IMessagePeekLockControl>());
+
+            MessagePeekLockControlProvider.Default = mockMessagePeekLockControlProvider.Object;
+        }
+
+        public class GetPeekLockControl : PeekLockMessageControlFacts
         {
             [Fact]
             public void AttemptingToGetPeekLockControlForNullMessageThrows()
             {
-                IMessage message = null;
+                TestMessage message = null;
 
                 Action action = () => message.GetPeekLockControl();
 
@@ -27,15 +32,14 @@ namespace Obvs.AzureServiceBus.Tests
             }
 
             [Fact]
-            public void AttemptingToGetPeekLockControlForNonPeekLockBasedMessageThrows()
+            public void GetPeekLockControlForMessageReturnsNonNullInstance()
             {
-                IMessage message = Mock.Of<IMessage>();
-
-                Action action = () => message.GetPeekLockControl();
-
-                action.ShouldThrow<InvalidOperationException>();
+                new TestMessage().GetPeekLockControl().Should().NotBeNull();
             }
         }
 
+        internal class TestMessage
+        {
+        }
     }
 }
