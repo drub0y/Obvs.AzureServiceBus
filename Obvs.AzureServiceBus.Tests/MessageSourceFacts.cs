@@ -240,7 +240,7 @@ namespace Obvs.AzureServiceBus.Tests
                 mockPeekLockControlProvider.Setup(bmplcp => bmplcp.GetMessagePeekLockControl(testPeekLockMessage))
                     .Returns(mockBrokeredMessagePeekLockControl.Object);
 
-                MessagePeekLockControlProvider.Default = mockPeekLockControlProvider.Object;
+                MessagePeekLockControlProvider.Use(mockPeekLockControlProvider.Object);
 
                 MessageSource<TestPeekLockMessage> messageSource = new MessageSource<TestPeekLockMessage>(brokeredMessages, new[] { mockTestPeekLockMessageDeserializer.Object }, Mock.Of<IMessageBrokeredMessageTable>());
 

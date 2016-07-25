@@ -15,7 +15,7 @@ namespace Obvs.AzureServiceBus.Tests
             mockMessagePeekLockControlProvider.Setup(mplcp => mplcp.GetMessagePeekLockControl<TestMessage>(It.IsAny<TestMessage>()))
                 .Returns(Mock.Of<IMessagePeekLockControl>());
 
-            MessagePeekLockControlProvider.Default = mockMessagePeekLockControlProvider.Object;
+            MessagePeekLockControlProvider.Use(mockMessagePeekLockControlProvider.Object);
         }
 
         public class GetPeekLockControl : PeekLockMessageControlFacts

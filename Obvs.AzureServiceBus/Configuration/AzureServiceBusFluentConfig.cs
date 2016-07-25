@@ -79,7 +79,15 @@ namespace Obvs.AzureServiceBus.Configuration
         ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingSubscriptionFor<T>(string topicPath, string subscriptionName, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage;
     }
 
-    internal class AzureServiceBusFluentConfig<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> : ICanAddAzureServiceBusServiceName<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanCreateEndpointAsClientOrServer<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyEndpointSerializers<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyAzureServiceBusMessagingEntityVerifier<TMessage, TCommand, TEvent, TRequest, TResponse>, ICanSpecifyPropertyProviders<TMessage, TCommand, TEvent, TRequest, TResponse>
+    internal class AzureServiceBusFluentConfig<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse> :
+        ICanAddAzureServiceBusServiceName<TMessage, TCommand, TEvent, TRequest, TResponse>,
+        ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse>,
+        ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse>,
+        ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse>,
+        ICanCreateEndpointAsClientOrServer<TMessage, TCommand, TEvent, TRequest, TResponse>,
+        ICanSpecifyEndpointSerializers<TMessage, TCommand, TEvent, TRequest, TResponse>,
+        ICanSpecifyAzureServiceBusMessagingEntityVerifier<TMessage, TCommand, TEvent, TRequest, TResponse>,
+        ICanSpecifyPropertyProviders<TMessage, TCommand, TEvent, TRequest, TResponse>
         where TMessage : class
         where TCommand : class, TMessage
         where TEvent : class, TMessage
@@ -107,6 +115,7 @@ namespace Obvs.AzureServiceBus.Configuration
         public ICanSpecifyAzureServiceBusNamespace<TMessage, TCommand, TEvent, TRequest, TResponse> Named(string serviceName)
         {
             _serviceName = serviceName;
+
             return this;
         }
 
@@ -140,27 +149,28 @@ namespace Obvs.AzureServiceBus.Configuration
             _messagingEntityVerifier.EnsureMessagingEntitiesExist(_messageTypePathMappings);
 
             return new AzureServiceBusEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(_serviceName, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyFilter, _typeFilter, _messagePropertyProviderManager);
-        }        
+        }
 
         public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithConnectionString(string connectionString)
         {
             if(connectionString == null) throw new ArgumentNullException("connectionString");
-            
+
             return WithNamespaceManager(NamespaceManager.CreateFromConnectionString(connectionString));
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithNamespaceManager(INamespaceManager namespaceManager)
         {
             if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
-            
+
             _namespaceManager = namespaceManager;
+
             return this;
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithNamespaceManager(NamespaceManager namespaceManager)
         {
             if(namespaceManager == null) throw new ArgumentNullException("namespaceManager");
-            
+
             return WithNamespaceManager(new NamespaceManagerWrapper(namespaceManager));
         }
 
@@ -168,8 +178,9 @@ namespace Obvs.AzureServiceBus.Configuration
         public ICanSpecifyAzureServiceBusMessagingEntityVerifier<TMessage, TCommand, TEvent, TRequest, TResponse> WithMessagingFactory(IMessagingFactory messagingFactory)
         {
             if(messagingFactory == null) throw new ArgumentNullException("messagingFactory");
-            
+
             _messagingFactory = messagingFactory;
+
             return this;
         }
 
@@ -183,6 +194,7 @@ namespace Obvs.AzureServiceBus.Configuration
             if(messagingEntityVerifier == null) throw new ArgumentNullException("messagingEntityVerifier");
 
             _messagingEntityVerifier = messagingEntityVerifier;
+
             return this;
         }
 
@@ -190,6 +202,7 @@ namespace Obvs.AzureServiceBus.Configuration
         {
             _serializer = serializer;
             _deserializerFactory = deserializerFactory;
+
             return this;
         }
 
@@ -197,6 +210,7 @@ namespace Obvs.AzureServiceBus.Configuration
         {
             _assemblyFilter = assemblyFilter;
             _typeFilter = typeFilter;
+
             return this;
         }
 
@@ -218,7 +232,7 @@ namespace Obvs.AzureServiceBus.Configuration
         public ICanSpecifyAzureServiceBusMessagingEntity<TMessage, TCommand, TEvent, TRequest, TResponse> UsingQueueFor<T>(string queuePath, MessageReceiveMode receiveMode, MessagingEntityCreationOptions creationOptions) where T : class, TMessage
         {
             AddMessageTypePathMapping(new MessageTypeMessagingEntityMappingDetails(typeof(T), queuePath, MessagingEntityType.Queue, creationOptions, receiveMode));
-            
+
             return this;
         }
 
@@ -266,6 +280,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
             return this;
         }
+
         private void AddMessageTypePathMapping(MessageTypeMessagingEntityMappingDetails messageTypePathMappingDetails)
         {
             MessageTypeMessagingEntityMappingDetails existingMessageTypePathMapping = _messageTypePathMappings.FirstOrDefault(mtpm => mtpm.MessageType == messageTypePathMappingDetails.MessageType && mtpm.MessagingEntityType == messageTypePathMappingDetails.MessagingEntityType);

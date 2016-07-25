@@ -108,7 +108,7 @@ namespace Obvs.AzureServiceBus.Configuration
                     typeof(IMessageDeserializerFactory).GetMethod("Create").MakeGenericMethod(messageType, typeof(TServiceMessage)),
                     Expression.Constant(_assemblyFilter, typeof(Func<Assembly, bool>)),
                     Expression.Constant(_typeFilter, typeof(Func<Type, bool>))),
-                Expression.Constant(MessageBrokeredMessageTable.Default, typeof(IMessageBrokeredMessageTable)))).Compile().Invoke();
+                Expression.Constant(MessageBrokeredMessageTable.ConfiguredInstance, typeof(IMessageBrokeredMessageTable)))).Compile().Invoke();
         }
     }
 }

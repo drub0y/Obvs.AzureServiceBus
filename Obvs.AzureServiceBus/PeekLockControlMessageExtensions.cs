@@ -9,7 +9,7 @@ namespace Obvs.AzureServiceBus
         {
             if(message == null) throw new ArgumentNullException(nameof(message));
 
-            IMessagePeekLockControlProvider configuredMessagePeekLockControlProvider = MessagePeekLockControlProvider.Default;
+            IMessagePeekLockControlProvider configuredMessagePeekLockControlProvider = MessagePeekLockControlProvider.ConfiguredInstance;
 
             if(configuredMessagePeekLockControlProvider == null)
             {

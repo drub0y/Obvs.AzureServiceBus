@@ -15,7 +15,15 @@ namespace Obvs.AzureServiceBus.Infrastructure
 
     internal sealed class MessageBrokeredMessageTable
     {
-        public static IMessageBrokeredMessageTable Default = new DefaultMessageBrokeredMessageTable();
+        private static readonly IMessageBrokeredMessageTable Instance = new DefaultMessageBrokeredMessageTable();
+
+        public static IMessageBrokeredMessageTable ConfiguredInstance
+        {
+            get
+            {
+                return Instance;
+            }
+        }
     }
 
     internal sealed class DefaultMessageBrokeredMessageTable : IMessageBrokeredMessageTable
