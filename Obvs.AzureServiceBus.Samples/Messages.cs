@@ -8,7 +8,7 @@ namespace Obvs.AzureServiceBus.Samples
     }
 
 
-    public class SampleCommand : SampleMessage, ICommand
+    public class SampleCommand : SampleMessage
     {
         public string CommandId
         {
@@ -17,7 +17,7 @@ namespace Obvs.AzureServiceBus.Samples
         }
     }
 
-    public class SampleEvent : SampleMessage, IEvent
+    public class SampleEvent : SampleMessage
     {
         public string EventId
         {
@@ -26,7 +26,7 @@ namespace Obvs.AzureServiceBus.Samples
         }
     }
 
-    public class SampleRequest : SampleMessage, IRequest
+    public class SampleRequest : SampleMessage
     {
         public string RequestId
         {
@@ -41,7 +41,7 @@ namespace Obvs.AzureServiceBus.Samples
         }
     }
 
-    public class SampleResponse : SampleMessage, IResponse
+    public class SampleResponse : SampleMessage
     {
         public string RequestId
         {

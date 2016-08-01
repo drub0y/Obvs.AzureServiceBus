@@ -14,23 +14,22 @@ namespace Obvs.AzureServiceBus.Samples
 
         static void Main(string[] args)
         {
-            var serviceBus = ServiceBus.Configure()
-                .WithAzureServiceBusEndpoint<SampleMessage>()
+            var serviceBus = ServiceBus<SampleMessage, SampleCommand, SampleEvent, SampleRequest, SampleResponse>.Configure()
+                .WithAzureServiceBusEndpoint()
                 .Named("Sample Message Bus")
                 .WithConnectionString(Program.GetConnectionString())
-                .UsingQueueFor<ICommand>(BuildMessagingEntityName("commands"), MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
-                .UsingTopicFor<IEvent>(BuildMessagingEntityName("events"), MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
-                .UsingSubscriptionFor<IEvent>(BuildMessagingEntityName("events"), "sample-subscription1", MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
+                .UsingQueueFor<SampleCommand>(BuildMessagingEntityName("commands"), MessageReceiveMode.PeekLock, MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
+                .UsingTopicFor<SampleEvent>(BuildMessagingEntityName("events"), MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
+                .UsingSubscriptionFor<SampleEvent>(BuildMessagingEntityName("events"), "sample-subscription1", MessageReceiveMode.PeekLock, MessagingEntityCreationOptions.CreateIfDoesntExist | MessagingEntityCreationOptions.CreateAsTemporary | MessagingEntityCreationOptions.RecreateExistingTemporary)
                 .SerializedAsJson()
-                .FilterMessageTypeAssemblies(assembly => assembly == typeof(Program).Assembly)
+                .FilterMessageTypeAssemblies(assembly => assembly == typeof(Program).Assembly, t => typeof(SampleMessage).IsAssignableFrom(t))
                 .AsClientAndServer()
-                .UsingDebugLogging(e => true)
                 .CreateServiceBus();
 
             IDisposable commandsSubscription = serviceBus.Commands
                 .SubscribeOn(TaskPoolScheduler.Default)
                 .OfType<SampleCommand>()
-                .Subscribe(async c =>
+                .SelectMany(async c =>
                 {
                     Console.WriteLine("Got command: {0}", c.CommandId);
 
@@ -38,7 +37,12 @@ namespace Obvs.AzureServiceBus.Samples
                     {
                         EventId = "EVENT:" + c.CommandId,
                     });
-                });
+
+                    await c.GetPeekLockControl().CompleteAsync();
+
+                    return c;
+                })
+                .Subscribe();
 
             IDisposable commandSenderSubscription = null;
             IDisposable eventsSubscription = null;
@@ -63,11 +67,13 @@ namespace Obvs.AzureServiceBus.Samples
                                 .SubscribeOn(TaskPoolScheduler.Default)
                                 .Subscribe(async l =>
                                 {
-                                    Console.WriteLine("Sending command...");
-                                    
+                                    string commandId = Guid.NewGuid().ToString("D");
+
+                                    Console.WriteLine("Sending command {0}...", commandId);
+
                                     await serviceBus.SendAsync(new SampleCommand
                                         {
-                                            CommandId = Guid.NewGuid().ToString("D")
+                                            CommandId = commandId
                                         });
                                 });
                         }
@@ -87,10 +93,15 @@ namespace Obvs.AzureServiceBus.Samples
                             eventsSubscription = serviceBus.Events
                                 .SubscribeOn(TaskPoolScheduler.Default)
                                 .OfType<SampleEvent>()
-                                .Subscribe(e =>
+                                .SelectMany(async e =>
                                 {
                                     Console.WriteLine("Got event: {0}", e.EventId);
-                                });
+
+                                    await e.GetPeekLockControl().CompleteAsync();
+
+                                    return e;
+                                })
+                                .Subscribe();
                         }
                         else
                         {
