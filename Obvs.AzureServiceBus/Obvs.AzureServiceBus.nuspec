@@ -11,16 +11,8 @@
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
         <releaseNotes>
-            BREAKING CHANGE:
-
-            This release removes the requirement of inheriting from the PeekLockMessage class in order to gain
-            control over peek lock messages. The class itself has been removed entirely, but there are effectively
-            no other external API changes. Upon upgrading to this version of the library the only change you
-            should have to make is to remove PeekLockMessage as a base class wherever it was being used.
-
-            Another positive side effect of this change is that you may also be able to remove references to
-            the Obvs.AzureServiceBus library and all of its dependencies from some of your projects since it
-            no longer requires polution of your domain type hierarchy.
+            * Introduction of incoming/outgoing AzureSB transport specific message properties support via GetIncoming/OutgoingMessageProperties extension methods (details here: https://github.com/drub0y/Obvs.AzureServiceBus/wiki/Accessing-Azure-Service-Bus-specific-message-properties)
+            * Various internal refactorings of how messages are mapped to their underlying AzureSB BrokeredMessages (details here: https://github.com/drub0y/Obvs.AzureServiceBus/pull/17)
         </releaseNotes>
     </metadata>
 </package>

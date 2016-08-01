@@ -1,24 +1,33 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Obvs.Types;
-using Xunit;
 using FluentAssertions;
-using Obvs.AzureServiceBus;
 using Moq;
+using Obvs.AzureServiceBus.Infrastructure;
+using Xunit;
 
 namespace Obvs.AzureServiceBus.Tests
 {
     public class PeekLockMessageControlFacts
     {
-        public class GetPeekLockControl
+        private Mock<IMessagePeekLockControlProvider> _mockMessagePeekLockControlProvider;
+        private Mock<IMessagePeekLockControl> _mockMessagePeekLockControl;
+
+        public PeekLockMessageControlFacts()
+        {
+            _mockMessagePeekLockControl = new Mock<IMessagePeekLockControl>();
+
+            _mockMessagePeekLockControlProvider = new Mock<IMessagePeekLockControlProvider>();
+            _mockMessagePeekLockControlProvider.Setup(mplcp => mplcp.GetMessagePeekLockControl<TestMessage>(It.IsAny<TestMessage>()))
+                .Returns(_mockMessagePeekLockControl.Object);
+
+            MessagePeekLockControlProvider.Use(_mockMessagePeekLockControlProvider.Object);
+        }
+
+        public class GetPeekLockControl : PeekLockMessageControlFacts
         {
             [Fact]
             public void AttemptingToGetPeekLockControlForNullMessageThrows()
             {
-                IMessage message = null;
+                TestMessage message = null;
 
                 Action action = () => message.GetPeekLockControl();
 
@@ -27,15 +36,24 @@ namespace Obvs.AzureServiceBus.Tests
             }
 
             [Fact]
-            public void AttemptingToGetPeekLockControlForNonPeekLockBasedMessageThrows()
+            public void GetPeekLockControlForMessageInvokesProvider()
             {
-                IMessage message = Mock.Of<IMessage>();
+                TestMessage testMessage = new TestMessage();
 
-                Action action = () => message.GetPeekLockControl();
+                testMessage.GetPeekLockControl();
 
-                action.ShouldThrow<InvalidOperationException>();
+                _mockMessagePeekLockControlProvider.Verify(mplcp => mplcp.GetMessagePeekLockControl(testMessage), Times.Once());
+            }
+
+            [Fact]
+            public void GetPeekLockControlForMessageReturnsExpectedInstance()
+            {
+                new TestMessage().GetPeekLockControl().Should().Be(_mockMessagePeekLockControl.Object);
             }
         }
 
+        internal class TestMessage
+        {
+        }
     }
 }

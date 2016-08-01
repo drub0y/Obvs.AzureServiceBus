@@ -112,6 +112,7 @@
     <Compile Include="MessagingEntityVerifierFacts.cs" />
     <Compile Include="ConfigurationFacts.cs" />
     <Compile Include="MessagePublisherFacts.cs" />
+    <Compile Include="MessagePropertiesFacts.cs" />
     <Compile Include="PeekLockMessageControlFacts.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MessageSourceFacts.cs" />

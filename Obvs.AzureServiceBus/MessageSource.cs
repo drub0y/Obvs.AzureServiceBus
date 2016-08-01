@@ -17,61 +17,35 @@ namespace Obvs.AzureServiceBus
         private IObservable<BrokeredMessage> _brokeredMessages;
         private Dictionary<string, IMessageDeserializer<TMessage>> _deserializers;
         private CancellationTokenSource _messageReceiverBrokeredMessageObservableCancellationTokenSource;
-        private IBrokeredMessagePeekLockControlProvider _peekLockControlProvider;
+        private IMessageBrokeredMessageTable _messageBrokeredMessageTable;
 
-        public MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
-            : this(messagingEntityFactory, deserializers, null)
-        {
-        }
-
-        public MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers)
-            : this(brokeredMessages, deserializers, null)
-        {
-        }
-
-        internal MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
+        internal MessageSource(IMessagingEntityFactory messagingEntityFactory, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessageBrokeredMessageTable messageBrokeredMessageTable)
         {
             if(messagingEntityFactory == null) throw new ArgumentNullException(nameof(messagingEntityFactory));
 
             IObservable<BrokeredMessage> brokeredMessages = CreateBrokeredMessageObservableFromMessageReceiver(messagingEntityFactory);
 
-            Initialize(brokeredMessages, deserializers, peekLockControlProvider);
+            Initialize(brokeredMessages, deserializers, messageBrokeredMessageTable);
         }
 
-        internal MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
+        internal MessageSource(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessageBrokeredMessageTable messageBrokeredMessageTable)
         {
-            Initialize(brokeredMessages, deserializers, peekLockControlProvider);
+            Initialize(brokeredMessages, deserializers, messageBrokeredMessageTable);
         }
 
         public IObservable<TMessage> Messages
         {
             get
             {
-                return (from bm in _brokeredMessages
-                        where IsCorrectMessageType(bm)
-                        select new
+                return _brokeredMessages
+                        .Where(IsCorrectMessageType)
+                        .Select(bm => new
                         {
                             BrokeredMessage = bm,
                             DeserializedMessage = Deserialize(bm)
                         })
-                        .Select(messageParts =>
-                        {
-                            TMessage deserializedMessage = messageParts.DeserializedMessage;
-
-
-                            if(_peekLockControlProvider != null)
-                            {
-                                // NOTE: in the case of a peek lock message, the peek lock control will take care of disposing the brokered message
-                                _peekLockControlProvider.ProvidePeekLockControl(messageParts.DeserializedMessage, messageParts.BrokeredMessage);
-                            }
-                            else
-                            {
-                                // Dispose of the brokered message immediately as there will be no further use of it
-                                messageParts.BrokeredMessage.Dispose();
-                            }
-
-                            return deserializedMessage;
-                        });
+                        .Do(messageParts => _messageBrokeredMessageTable.SetBrokeredMessageForMessage(messageParts.DeserializedMessage, messageParts.BrokeredMessage))
+                        .Select(messageParts => messageParts.DeserializedMessage);
             }
         }
 
@@ -111,14 +85,15 @@ namespace Obvs.AzureServiceBus
             }).Publish().RefCount();
         }
 
-        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IBrokeredMessagePeekLockControlProvider peekLockControlProvider)
+        private void Initialize(IObservable<BrokeredMessage> brokeredMessages, IEnumerable<IMessageDeserializer<TMessage>> deserializers, IMessageBrokeredMessageTable messageBrokeredMessageTable)
         {
             if(brokeredMessages == null) throw new ArgumentNullException(nameof(brokeredMessages));
             if(deserializers == null) throw new ArgumentNullException(nameof(deserializers));
+            if(messageBrokeredMessageTable == null) throw new ArgumentNullException(nameof(messageBrokeredMessageTable));
 
             _brokeredMessages = brokeredMessages;
             _deserializers = deserializers.ToDictionary(d => d.GetTypeName());
-            _peekLockControlProvider = peekLockControlProvider;
+            _messageBrokeredMessageTable = messageBrokeredMessageTable;
         }
 
         private bool IsCorrectMessageType(BrokeredMessage brokeredMessage)

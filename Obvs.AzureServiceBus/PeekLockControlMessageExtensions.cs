@@ -9,21 +9,14 @@ namespace Obvs.AzureServiceBus
         {
             if(message == null) throw new ArgumentNullException(nameof(message));
 
-            IMessagePeekLockControlProvider configuredMessagePeekLockControlProvider = MessagePeekLockControlProvider.Default;
+            IMessagePeekLockControlProvider configuredMessagePeekLockControlProvider = MessagePeekLockControlProvider.ConfiguredInstance;
 
             if(configuredMessagePeekLockControlProvider == null)
             {
-                throw new InvalidOperationException($"No {nameof(IMessagePeekLockControlProvider)} has been configured."); 
+                throw new InvalidOperationException($"No {nameof(IMessagePeekLockControlProvider)} has been configured.");
             }
 
-            IMessagePeekLockControl result = configuredMessagePeekLockControlProvider.GetMessagePeekLockControl(message);
-
-            if(result == null)
-            {
-                throw new InvalidOperationException("The specified message is not being tracked for peek lock control.");
-            }
-
-            return result;
+            return configuredMessagePeekLockControlProvider.GetMessagePeekLockControl(message);
         }
     }
 }
