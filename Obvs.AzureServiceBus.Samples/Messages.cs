@@ -3,7 +3,7 @@ using Obvs.AzureServiceBus;
 
 namespace Obvs.AzureServiceBus.Samples
 {
-    public class SampleMessage : PeekLockMessage
+    public class SampleMessage
     {
     }
 
