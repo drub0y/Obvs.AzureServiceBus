@@ -26,19 +26,31 @@ namespace Obvs.AzureServiceBus.Samples
                 .AsClientAndServer()
                 .CreateServiceBus();
 
+            Random commandProcessingChaosRandom = new Random();
+
             IDisposable commandsSubscription = serviceBus.Commands
                 .SubscribeOn(TaskPoolScheduler.Default)
                 .OfType<SampleCommand>()
                 .SelectMany(async c =>
                 {
-                    Console.WriteLine("Got command: {0}", c.CommandId);
+                    Console.WriteLine("Got command: CommandId={0};DeliveryCount={1}", c.CommandId, c.GetIncomingMessageProperties().DeliveryCount);
 
-                    await serviceBus.PublishAsync(new SampleEvent
+                    // 90% of the time just complete the command successfully, 10% of the time simulate a failure so the message will be received again
+                    if(commandProcessingChaosRandom.Next(1, 100) < 90)
                     {
-                        EventId = "EVENT:" + c.CommandId,
-                    });
+                        await c.GetPeekLockControl().CompleteAsync();
 
-                    await c.GetPeekLockControl().CompleteAsync();
+                        await serviceBus.PublishAsync(new SampleEvent
+                        {
+                            EventId = "EVENT:" + c.CommandId,
+                        });
+                    }
+                    else
+                    {
+                        Console.WriteLine("Simulating failure to call CompleteAsync, command with CommandId={0} will be received again.", c.CommandId);
+
+                        await c.GetPeekLockControl().AbandonAsync();
+                    }
 
                     return c;
                 })
@@ -52,7 +64,7 @@ namespace Obvs.AzureServiceBus.Samples
             Console.WriteLine("'E' - attach/detach event listener");
 
             bool shouldStop = false;
-            Random random = new Random();
+
 
             do
             {
@@ -63,7 +75,7 @@ namespace Obvs.AzureServiceBus.Samples
                     case ConsoleKey.C:
                         if(commandSenderSubscription == null)
                         {
-                            commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(random.Next(250, 1000)))
+                            commandSenderSubscription = Observable.Interval(TimeSpan.FromMilliseconds(500))
                                 .SubscribeOn(TaskPoolScheduler.Default)
                                 .Subscribe(async l =>
                                 {
@@ -120,7 +132,6 @@ namespace Obvs.AzureServiceBus.Samples
                 }
             } while(!shouldStop);
 
-            Console.ReadKey(true);
             Console.WriteLine("Shutting down...");
 
             if(commandSenderSubscription != null)
