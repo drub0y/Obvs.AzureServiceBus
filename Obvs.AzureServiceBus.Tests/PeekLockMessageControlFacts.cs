@@ -2,20 +2,24 @@
 using FluentAssertions;
 using Moq;
 using Obvs.AzureServiceBus.Infrastructure;
-using Obvs.Types;
 using Xunit;
 
 namespace Obvs.AzureServiceBus.Tests
 {
     public class PeekLockMessageControlFacts
     {
+        private Mock<IMessagePeekLockControlProvider> _mockMessagePeekLockControlProvider;
+        private Mock<IMessagePeekLockControl> _mockMessagePeekLockControl;
+
         public PeekLockMessageControlFacts()
         {
-            Mock<IMessagePeekLockControlProvider> mockMessagePeekLockControlProvider = new Mock<IMessagePeekLockControlProvider>();
-            mockMessagePeekLockControlProvider.Setup(mplcp => mplcp.GetMessagePeekLockControl<TestMessage>(It.IsAny<TestMessage>()))
-                .Returns(Mock.Of<IMessagePeekLockControl>());
+            _mockMessagePeekLockControl = new Mock<IMessagePeekLockControl>();
 
-            MessagePeekLockControlProvider.Use(mockMessagePeekLockControlProvider.Object);
+            _mockMessagePeekLockControlProvider = new Mock<IMessagePeekLockControlProvider>();
+            _mockMessagePeekLockControlProvider.Setup(mplcp => mplcp.GetMessagePeekLockControl<TestMessage>(It.IsAny<TestMessage>()))
+                .Returns(_mockMessagePeekLockControl.Object);
+
+            MessagePeekLockControlProvider.Use(_mockMessagePeekLockControlProvider.Object);
         }
 
         public class GetPeekLockControl : PeekLockMessageControlFacts
@@ -32,9 +36,19 @@ namespace Obvs.AzureServiceBus.Tests
             }
 
             [Fact]
-            public void GetPeekLockControlForMessageReturnsNonNullInstance()
+            public void GetPeekLockControlForMessageInvokesProvider()
             {
-                new TestMessage().GetPeekLockControl().Should().NotBeNull();
+                TestMessage testMessage = new TestMessage();
+
+                testMessage.GetPeekLockControl();
+
+                _mockMessagePeekLockControlProvider.Verify(mplcp => mplcp.GetMessagePeekLockControl(testMessage), Times.Once());
+            }
+
+            [Fact]
+            public void GetPeekLockControlForMessageReturnsExpectedInstance()
+            {
+                new TestMessage().GetPeekLockControl().Should().Be(_mockMessagePeekLockControl.Object);
             }
         }
 
