@@ -11,8 +11,7 @@
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
         <releaseNotes>
-            * Introduction of incoming/outgoing AzureSB transport specific message properties support via GetIncoming/OutgoingMessageProperties extension methods (details here: https://github.com/drub0y/Obvs.AzureServiceBus/wiki/Accessing-Azure-Service-Bus-specific-message-properties)
-            * Various internal refactorings of how messages are mapped to their underlying AzureSB BrokeredMessages (details here: https://github.com/drub0y/Obvs.AzureServiceBus/pull/17)
+            FIX: fixing bug where getting outgoing message properties for a newly created message would result in a NullReferenceException.
         </releaseNotes>
     </metadata>
 </package>
