@@ -38,18 +38,8 @@ namespace Obvs.AzureServiceBus.Infrastructure
             _innerTable.Add(message, brokeredMessage);
         }
 
-        public BrokeredMessage GetBrokeredMessageForMessage(object message)
-        {
-            BrokeredMessage brokeredMessage;
+        public BrokeredMessage GetBrokeredMessageForMessage(object message) => _innerTable.GetOrCreateValue(message);
 
-            _innerTable.TryGetValue(message, out brokeredMessage);
-
-            return brokeredMessage;
-        }
-
-        public void RemoveBrokeredMessageForMessage(object message)
-        {
-            _innerTable.Remove(message);
-        }
+        public void RemoveBrokeredMessageForMessage(object message) => _innerTable.Remove(message);
     }
 }
