@@ -32,7 +32,7 @@ namespace Obvs.AzureServiceBus.Infrastructure
             Instance = messagePropertiesProvider;
         }
 
-        public static void UseDefault() => Use(new DefaultBrokeredMessagePropertiesProvider(MessageBrokeredMessageTable.ConfiguredInstance));
+        public static void UseDefault() => Use(new DefaultMessagePropertiesProvider(MessageBrokeredMessageTable.ConfiguredInstance, MessageOutgoingPropertiesTable.ConfiguredInstance));
 
         public static void UseFakeMessagePropertiesProvider() => Use(new FakeMessagePropertiesProvider());
     }
@@ -86,18 +86,34 @@ namespace Obvs.AzureServiceBus.Infrastructure
         }
     }
 
-    internal sealed class DefaultBrokeredMessagePropertiesProvider : IMessagePropertiesProvider
+    internal sealed class DefaultMessagePropertiesProvider : IMessagePropertiesProvider
     {
         private IMessageBrokeredMessageTable _messageBrokeredMessageTable;
+        private IMessageOutgoingPropertiesTable _messageOutgoingPropertiesTable;
 
-        public DefaultBrokeredMessagePropertiesProvider(IMessageBrokeredMessageTable messageBrokeredMessageTable)
+        public DefaultMessagePropertiesProvider(IMessageBrokeredMessageTable messageBrokeredMessageTable, IMessageOutgoingPropertiesTable messageOutgoingPropertiesTable)
         {
             _messageBrokeredMessageTable = messageBrokeredMessageTable;
+            _messageOutgoingPropertiesTable = messageOutgoingPropertiesTable;
         }
 
         public IIncomingMessageProperties GetIncomingMessageProperties(object message) => new DefaultBrokeredMessageIncomingMessageProperties(_messageBrokeredMessageTable.GetBrokeredMessageForMessage(message));
 
-        public IOutgoingMessageProperties GetOutgoingMessageProperties(object message) => new DefaultBrokeredMessageOutgoingMessageProperties(_messageBrokeredMessageTable.GetBrokeredMessageForMessage(message));
+        public IOutgoingMessageProperties GetOutgoingMessageProperties(object message)
+        {
+            IOutgoingMessageProperties result;
+
+            result = _messageOutgoingPropertiesTable.GetOutgoingPropertiesForMessage(message);
+
+            if(result == null)
+            {
+                result = new DefaultBrokeredMessageOutgoingMessageProperties();
+
+                _messageOutgoingPropertiesTable.SetOutgoingPropertiesForMessage(message, result);
+            }
+
+            return result;
+        }
     }
 
     public interface IIncomingMessageProperties
@@ -143,36 +159,19 @@ namespace Obvs.AzureServiceBus.Infrastructure
 
     internal sealed class DefaultBrokeredMessageOutgoingMessageProperties : IOutgoingMessageProperties
     {
-        private readonly BrokeredMessage _brokeredMessage;
-
-        public DefaultBrokeredMessageOutgoingMessageProperties(BrokeredMessage brokeredMessage)
+        public DefaultBrokeredMessageOutgoingMessageProperties()
         {
-            _brokeredMessage = brokeredMessage;
+
         }
 
         public DateTime ScheduledEnqueueTimeUtc
         {
-            get
-            {
-                return _brokeredMessage.ScheduledEnqueueTimeUtc;
-            }
-            set
-            {
-                _brokeredMessage.ScheduledEnqueueTimeUtc = value;
-            }
+            get; set;
         }
 
         public TimeSpan TimeToLive
         {
-            get
-            {
-                return _brokeredMessage.TimeToLive;
-            }
-
-            set
-            {
-                _brokeredMessage.TimeToLive = value;
-            }
+            get; set;
         }
     }
 }

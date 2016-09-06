@@ -11,7 +11,7 @@
         <copyright>Copyright 2015</copyright>
         <tags>Azure Commands Events CQRS Rx Observable</tags>
         <releaseNotes>
-            FIX: fixing bug where getting outgoing message properties for a newly created message would result in a NullReferenceException.
+            FIX: fixing bug outgoing message properties were not actually being applied to the outgoing BrokeredMessage.
         </releaseNotes>
     </metadata>
 </package>

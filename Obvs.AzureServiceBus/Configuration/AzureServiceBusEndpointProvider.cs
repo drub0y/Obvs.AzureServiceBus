@@ -24,9 +24,10 @@ namespace Obvs.AzureServiceBus.Configuration
         private readonly Func<Type, bool> _typeFilter;
         private readonly List<MessageTypeMessagingEntityMappingDetails> _messageTypePathMappings;
         private readonly MessagingEntityFactory _messagingEntityFactory;
+        private readonly IMessageOutgoingPropertiesTable _messageOutgoingPropertiesTable;
         private readonly MessagePropertyProviderManager<TMessage> _messagePropertyProviderManager;
 
-        public AzureServiceBusEndpointProvider(string serviceName, IMessagingFactory messagingFactory, IMessageSerializer messageSerializer, IMessageDeserializerFactory messageDeserializerFactory, List<MessageTypeMessagingEntityMappingDetails> messageTypePathMappings, Func<Assembly, bool> assemblyFilter, Func<Type, bool> typeFilter, MessagePropertyProviderManager<TMessage> messagePropertyProviderManager)
+        public AzureServiceBusEndpointProvider(string serviceName, IMessagingFactory messagingFactory, IMessageSerializer messageSerializer, IMessageDeserializerFactory messageDeserializerFactory, List<MessageTypeMessagingEntityMappingDetails> messageTypePathMappings, Func<Assembly, bool> assemblyFilter, Func<Type, bool> typeFilter, MessagePropertyProviderManager<TMessage> messagePropertyProviderManager, IMessageOutgoingPropertiesTable messageOutgoingPropertiesTable)
             : base(serviceName)
         {
             if(messagingFactory == null) throw new ArgumentNullException(nameof(messagingFactory));
@@ -35,6 +36,7 @@ namespace Obvs.AzureServiceBus.Configuration
             if(messageTypePathMappings == null) throw new ArgumentNullException(nameof(messageTypePathMappings));
             if(messageTypePathMappings.Count == 0) throw new ArgumentException("An empty set of path mappings was specified.", nameof(messageTypePathMappings));
             if(messagePropertyProviderManager == null) throw new ArgumentNullException(nameof(messagePropertyProviderManager));
+            if(messageOutgoingPropertiesTable == null) throw new ArgumentNullException(nameof(messageOutgoingPropertiesTable));
 
             _messageSerializer = messageSerializer;
             _messageDeserializerFactory = messageDeserializerFactory;
@@ -42,6 +44,7 @@ namespace Obvs.AzureServiceBus.Configuration
             _typeFilter = typeFilter;
             _messageTypePathMappings = messageTypePathMappings;
             _messagePropertyProviderManager = messagePropertyProviderManager;
+            _messageOutgoingPropertiesTable = messageOutgoingPropertiesTable;
 
             _messagingEntityFactory = new MessagingEntityFactory(messagingFactory, messageTypePathMappings);
         }
@@ -51,8 +54,8 @@ namespace Obvs.AzureServiceBus.Configuration
             return new ServiceEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse>(
                GetMessageSource<TRequest>(),
                GetMessageSource<TCommand>(),
-               new MessagePublisher<TEvent>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TEvent>()),
-               new MessagePublisher<TResponse>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TResponse>()),
+               new MessagePublisher<TEvent>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TEvent>(), _messageOutgoingPropertiesTable),
+               new MessagePublisher<TResponse>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TResponse>(), _messageOutgoingPropertiesTable),
                typeof(TServiceMessage));
         }
 
@@ -63,8 +66,8 @@ namespace Obvs.AzureServiceBus.Configuration
             return new ServiceEndpointClient<TMessage, TCommand, TEvent, TRequest, TResponse>(
                GetMessageSource<TEvent>(),
                GetMessageSource<TResponse>(),
-               new MessagePublisher<TRequest>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TRequest>()),
-               new MessagePublisher<TCommand>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TCommand>()),
+               new MessagePublisher<TRequest>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TRequest>(), _messageOutgoingPropertiesTable),
+               new MessagePublisher<TCommand>(_messagingEntityFactory, _messageSerializer, _messagePropertyProviderManager.GetMessagePropertyProviderFor<TCommand>(), _messageOutgoingPropertiesTable),
                typeof(TServiceMessage));
         }
 
