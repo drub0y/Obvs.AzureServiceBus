@@ -17,17 +17,21 @@ namespace Obvs.AzureServiceBus
         private readonly IMessagingEntityFactory _messagingEntityFactory;
         private readonly IMessageSerializer _serializer;
         private readonly IMessagePropertyProvider<TMessage> _propertyProvider;
+        private readonly IMessageOutgoingPropertiesTable _messageOutgoingPropertiesTable;
         private readonly ConcurrentDictionary<Type, IMessageSender> _messageTypeMessageSenderMap;
 
-        internal MessagePublisher(IMessagingEntityFactory messagingEntityFactory, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider)
+        internal MessagePublisher(IMessagingEntityFactory messagingEntityFactory, IMessageSerializer serializer, IMessagePropertyProvider<TMessage> propertyProvider, IMessageOutgoingPropertiesTable messageOutgoingPropertiesTable)
         {
-            if(messagingEntityFactory == null) throw new ArgumentNullException("messagingEntityFactory");
-            if(serializer == null) throw new ArgumentNullException("serializer");
-            if(propertyProvider == null) throw new ArgumentNullException("propertyProvider");
+            if(messagingEntityFactory == null) throw new ArgumentNullException(nameof(messagingEntityFactory));
+            if(serializer == null) throw new ArgumentNullException(nameof(serializer));
+            if(propertyProvider == null) throw new ArgumentNullException(nameof(propertyProvider));
+            if(messageOutgoingPropertiesTable == null) throw new ArgumentNullException(nameof(messageOutgoingPropertiesTable));
 
             _messagingEntityFactory = messagingEntityFactory;
             _serializer = serializer;
             _propertyProvider = propertyProvider;
+            _messageOutgoingPropertiesTable = messageOutgoingPropertiesTable;
+
             _messageTypeMessageSenderMap = new ConcurrentDictionary<Type, IMessageSender>();
         }
 
@@ -51,21 +55,23 @@ namespace Obvs.AzureServiceBus
         {
             // NOTE: we don't dispose of the MemoryStream here because BrokeredMessage assumes ownership of it's lifetime
             MemoryStream messageBodyStream = new MemoryStream();
-            
+
             _serializer.Serialize(messageBodyStream, message);
 
             messageBodyStream.Position = 0;
 
             BrokeredMessage brokeredMessage = new BrokeredMessage(messageBodyStream);
 
+            ApplyAnyOutgoingProperties(message, brokeredMessage);
+
             SetSessionAndCorrelationIdentifiersIfApplicable(message, brokeredMessage);
-            
+
             SetProperties(message, properties, brokeredMessage);
 
             IMessageSender messageSenderForMessageType = GetMessageSenderForMessageType(message);
 
             await messageSenderForMessageType.SendAsync(brokeredMessage);
-        }        
+        }
 
         private static void SetProperties(TMessage message, IEnumerable<KeyValuePair<string, object>> properties, BrokeredMessage brokeredMessage)
         {
@@ -92,7 +98,7 @@ namespace Obvs.AzureServiceBus
                 if(responseMessage != null)
                 {
                     SetResponseSessionAndCorrelationIdentifiers(brokeredMessage, responseMessage);
-                }                
+                }
             }
         }
 
@@ -134,5 +140,20 @@ namespace Obvs.AzureServiceBus
             return _messagingEntityFactory.CreateMessageSender(messageType);
         }
 
+        private void ApplyAnyOutgoingProperties(TMessage message, BrokeredMessage brokeredMessage)
+        {
+            IOutgoingMessageProperties outgoingProperties = _messageOutgoingPropertiesTable.GetOutgoingPropertiesForMessage(message);
+
+            // Check if there were even any outgoing properties set for this message
+            if(outgoingProperties != null)
+            {
+                brokeredMessage.ScheduledEnqueueTimeUtc = outgoingProperties.ScheduledEnqueueTimeUtc;
+                brokeredMessage.TimeToLive = outgoingProperties.TimeToLive;
+
+
+                // Remove the properties for the message from the table now that we've mapped them as they'll have no further use beyond this point
+                _messageOutgoingPropertiesTable.RemoveOutgoingPropertiesForMessage(message);
+            }
+        }
     }
 }

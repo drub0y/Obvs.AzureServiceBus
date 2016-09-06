@@ -106,6 +106,7 @@ namespace Obvs.AzureServiceBus.Configuration
         private INamespaceManager _namespaceManager;
         private MessagePropertyProviderManager<TMessage> _messagePropertyProviderManager = new MessagePropertyProviderManager<TMessage>();
         private IMessagingEntityVerifier _messagingEntityVerifier;
+        private IMessageOutgoingPropertiesTable _messageOutgoingPropertiesTable = MessageOutgoingPropertiesTable.ConfiguredInstance;
 
         public AzureServiceBusFluentConfig(ICanAddEndpoint<TMessage, TCommand, TEvent, TRequest, TResponse> canAddEndpoint)
         {
@@ -148,7 +149,7 @@ namespace Obvs.AzureServiceBus.Configuration
 
             _messagingEntityVerifier.EnsureMessagingEntitiesExist(_messageTypePathMappings);
 
-            return new AzureServiceBusEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(_serviceName, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyFilter, _typeFilter, _messagePropertyProviderManager);
+            return new AzureServiceBusEndpointProvider<TServiceMessage, TMessage, TCommand, TEvent, TRequest, TResponse>(_serviceName, _messagingFactory, _serializer, _deserializerFactory, _messageTypePathMappings, _assemblyFilter, _typeFilter, _messagePropertyProviderManager, _messageOutgoingPropertiesTable);
         }
 
         public ICanSpecifyAzureServiceBusMessagingFactory<TMessage, TCommand, TEvent, TRequest, TResponse> WithConnectionString(string connectionString)
