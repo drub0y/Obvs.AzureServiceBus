@@ -2,12 +2,16 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.ServiceBus.Messaging;
 using Obvs.AzureServiceBus.Infrastructure;
 using Obvs.MessageProperties;
 using Obvs.Serialization;
 using Obvs.Types;
+
+[assembly: InternalsVisibleTo("Obvs.AzureServiceBus.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 
 namespace Obvs.AzureServiceBus
 {
