@@ -1,114 +1,17 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{2C889E39-B633-4EC8-9BF0-4C98DB630B0A}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Obvs.AzureServiceBus</RootNamespace>
-    <AssemblyName>Obvs.AzureServiceBus</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <TargetFrameworks>net45</TargetFrameworks>
+    <Company>Drew Marsh</Company>
+    <Copyright>Copyright © Drew Marsh 2015</Copyright>
+    <Version>1.0.0</Version>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageProjectUrl>https://github.com/drub0y/Obvs.AzureServiceBus</PackageProjectUrl>
+    <PackageReleaseNotes>Updated to Obvs v4.0</PackageReleaseNotes>
+    <Description>AzureServiceBus transport support for Obvs</Description>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.ServiceBus, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\WindowsAzure.ServiceBus.3.1.2\lib\net45-full\Microsoft.ServiceBus.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.WindowsAzure.Configuration, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.WindowsAzure.ConfigurationManager.3.2.0\lib\net40\Microsoft.WindowsAzure.Configuration.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Obvs, Version=3.0.0.47, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Obvs.3.0.0.47\lib\net45\Obvs.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Reactive.Core, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Core.2.2.5\lib\net45\System.Reactive.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Reactive.Interfaces, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Interfaces.2.2.5\lib\net45\System.Reactive.Interfaces.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Reactive.Linq, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Linq.2.2.5\lib\net45\System.Reactive.Linq.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Reactive.PlatformServices">
-      <HintPath>..\packages\Rx-PlatformServices.2.2.5\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
+    <PackageReference Include="WindowsAzure.ServiceBus" Version="3.1.2" />
+    <PackageReference Include="Microsoft.WindowsAzure.ConfigurationManager" Version="3.2.0" />
+    <PackageReference Include="Obvs" Version="4.0.0.1" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Configuration\AzureServiceBusConfigExtensions.cs" />
-    <Compile Include="Configuration\AzureServiceBusEndpointProvider.cs" />
-    <Compile Include="Configuration\AzureServiceBusFluentConfig.cs" />
-    <Compile Include="Configuration\ConfigurationUtilities.cs" />
-    <Compile Include="Configuration\MessageTypeMessagingEntityMappingDetails.cs" />
-    <Compile Include="Infrastructure\IMessageOutgoingPropertiesTable.cs" />
-    <Compile Include="Infrastructure\IMessageBrokeredMessageTable.cs" />
-    <Compile Include="Infrastructure\IMessagingEntityFactory.cs" />
-    <Compile Include="Infrastructure\IMessagingEntityVerifier.cs" />
-    <Compile Include="Infrastructure\MessagePropertiesProvider.cs" />
-    <Compile Include="Infrastructure\MessagingEntityVerifier.cs" />
-    <Compile Include="Infrastructure\PeekLockMessageControl.cs" />
-    <Compile Include="Infrastructure\MessageEntityFactory.cs" />
-    <Compile Include="Configuration\ConfigurationExceptions.cs" />
-    <Compile Include="Configuration\Unconfigured.cs" />
-    <Compile Include="Infrastructure\IMessageReceiver.cs" />
-    <Compile Include="Infrastructure\MessageReceiverWrapper.cs" />
-    <Compile Include="Infrastructure\MessagingFactoryWrapper.cs" />
-    <Compile Include="Infrastructure\IMessagingFactory.cs" />
-    <Compile Include="Infrastructure\NamespaceManagerWrapper.cs" />
-    <Compile Include="Infrastructure\INamespaceManager.cs" />
-    <Compile Include="Infrastructure\IMessageSender.cs" />
-    <Compile Include="Infrastructure\MessageSenderWrapper.cs" />
-    <Compile Include="MessagePropertiesMessageExtensions.cs" />
-    <Compile Include="MessagePublisher.cs" />
-    <Compile Include="MessageSource.cs" />
-    <Compile Include="PeekLockControlMessageExtensions.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Obvs.AzureServiceBus.nuspec" />
-    <None Include="packages.config">
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

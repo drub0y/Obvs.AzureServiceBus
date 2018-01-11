@@ -148,7 +148,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(mockMessageSender.Object);
 
                 var endpointProvider = new AzureServiceBusEndpointProvider<TestMessage, TestMessage, TestCommand, TestEvent, TestRequest, TestResponse>(
-                    "TestEndpoint", _mockMessagingFactory.Object, new JsonMessageSerializer(), new JsonMessageDeserializerFactory(), _messageTypePathMappings, _testAssemblyFilter, _testMessageTypeFilter, _messagePropertyProviderManager, _mockMessageOutgoingPropertiesTable.Object);
+                    "TestEndpoint", _mockMessagingFactory.Object, new JsonMessageSerializer(), new JsonMessageDeserializerFactory(typeof(JsonMessageDeserializer<>)), _messageTypePathMappings, _testAssemblyFilter, _testMessageTypeFilter, _messagePropertyProviderManager, _mockMessageOutgoingPropertiesTable.Object);
 
                 var testEvent = new TestSpecificEvent1
                 {
@@ -213,7 +213,7 @@ namespace Obvs.AzureServiceBus.Tests
                     .Returns(mockMessageSender.Object);
 
                 var endpointProvider = new AzureServiceBusEndpointProvider<TestMessage, TestMessage, TestCommand, TestEvent, TestRequest, TestResponse>(
-                    "TestEndpoint", _mockMessagingFactory.Object, new JsonMessageSerializer(), new JsonMessageDeserializerFactory(), _messageTypePathMappings, _testAssemblyFilter, _testMessageTypeFilter, _messagePropertyProviderManager, _mockMessageOutgoingPropertiesTable.Object);
+                    "TestEndpoint", _mockMessagingFactory.Object, new JsonMessageSerializer(), new JsonMessageDeserializerFactory(typeof(JsonMessageDeserializer<>)), _messageTypePathMappings, _testAssemblyFilter, _testMessageTypeFilter, _messagePropertyProviderManager, _mockMessageOutgoingPropertiesTable.Object);
 
                 var endpointClient = endpointProvider.CreateEndpointClient();
 
